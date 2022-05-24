@@ -33,14 +33,6 @@ mex_ok_interface('configure', bit_file)
 mex_ok_interface('swi', 6, 3);% set default levels
 mex_ok_interface('uwi');
 
-% %Thorlabs Powermeter setup
-% meter_list=ThorlabsPowerMeter;                              % Initiate the meter_list
-% DeviceDescription=meter_list.listdevices;               	% List available device(s)
-% pwr_meter=meter_list.connect(DeviceDescription);           % Connect single/the first devices
-% pwr_meter.setAverageTime(0.01);                            % Set average time for the measurement
-% pwr_meter.setTimeout(1000);
-% pwr_meter.setWaveLength(10600);                              % Set sensor wavelength
-
 %initial GUI settings
 fig = uifigure;
 fig.Color = [0.94 0.94 0.94];
@@ -1061,13 +1053,7 @@ end
             SaveFiberposButton = uibutton(FiberTab, 'push','ButtonPushedFcn',@SaveFiberposButtonPushed);
             SaveFiberposButton.Position = [69 16 97 37];
             SaveFiberposButton.Text = 'Save position';        
-            
-%             % Create BSEditField
-%             BSEditField = uieditfield(XYZstagesPanel, 'numeric');
-%             BSEditField.Position = [323 27 64 35];
-%             BSEditField.Value = C885.getPosition_z();
-%             BSEditField.ValueDisplayFormat = '%.3f';
-            
+                       
             % Create ShootingPanel
             ShootingPanel = uipanel(fig);
             ShootingPanel.TitlePosition = 'centertop';
