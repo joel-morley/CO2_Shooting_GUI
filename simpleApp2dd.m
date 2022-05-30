@@ -7,7 +7,7 @@ pause(0.5)
 
 % For PI
 clear C885
-PI_Controller = PI_GCS_Controller ();
+PI_Controller = PI_GCS_Controller();
 PI_Controller.Destroy();
 % handles to X, Y, Z motor axes
 if ( ~exist ( 'C885', 'var' ) || ~isa ( C885, 'PI_control' ) )
