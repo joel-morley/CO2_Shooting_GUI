@@ -1,7 +1,7 @@
 function r = curv_rad(Sample)
-G = @(ps,x) ps(1)*exp(-((x-ps(2))/ps(3)).^2/2)+ps(4);
+G = @(ps,x) ps(1)*exp(-((x-ps(2))/ps(3)).^2/2)+ps(4); % Gaussian function to fit the data to
 
-%% crop the data to within the rim
+%% crop the data to within the rim (glass plate surface)
 % [pks,locs,w,p] = findpeaks(-(Sample(:,2)-max(Sample(:,2))),...
 %                             'MinPeakHeight',0.7*max(Sample(:,2)),...
 %                             'MinPeakProminence',0.3*max(Sample(:,2)),...
@@ -30,6 +30,7 @@ else
 sigma_idx = round(w/2);
 data_fit= Sample(round(locs-1.5*sigma_idx):locs+round(1.5*sigma_idx),2);
 x_fit = Sample(locs-1.5*sigma_idx:locs+1.5*sigma_idx,1);
+    
 % data_fit= Sample(locs(1):locs(2),2);
 % x_fit = Sample(locs(1):locs(2),1);
 % rim_radius = (Sample(locs(2))-Sample(locs(1)))/2;
@@ -44,6 +45,7 @@ A = -p;
 % sigma = Sample(locs(2),1)-x0;
 sigma = (0.329*w)/2;
 bg = max(Sample(:,2));
+ 
 Init_params = [A x0 sigma bg];%  initial parameters for A, x0, sigma,bg
 [fparams,resnorm,residual]=lsqcurvefit(G,...
                                        Init_params,...
