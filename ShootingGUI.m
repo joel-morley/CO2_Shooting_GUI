@@ -50,8 +50,8 @@ hdata.misc.shoot = 0;
 
 hdata.pulse.trig_pulse_delay = 0;
 hdata.pulse.shoot_trig_delay = 0;
-hdata.pulse.laser_shutter_delay1 = 5;
-hdata.pulse.laser_shutter_delay2 = 1300;
+hdata.pulse.laser_shutter_delay1 = 0;
+hdata.pulse.laser_shutter_delay2 = 1000;
 
 guidata(fig,hdata)
 
@@ -659,7 +659,7 @@ mex_ok_interface('uwi');
                             for i=1:hdata.misc.num_shots
                                 mex_ok_interface('ati', 64, 1);% activate trigger
                                 mex_ok_interface('ati', 64, 2);% activate trigger
-                                pause((0.002*hdata.pulse.low_time2)+0.5)
+                                pause((0.002*hdata.pulse.laser_low_time2)+0.8)
                             end
                             else
                             z_0 = AtCube.getPosition_z();
@@ -672,7 +672,7 @@ mex_ok_interface('uwi');
                                     C885.move_y(y_shoot+(hdata.mill.y_dot(s)*0.000329));
                                     mex_ok_interface('ati', 64, 1);% activate trigger
                                     mex_ok_interface('ati', 64, 2);% activate trigger
-                                    pause((0.002*hdata.pulse.low_time2)+0.5)
+                                    pause((0.002*hdata.pulse.laser_low_time2)+0.8)
                                 end
                             end    
                         end
@@ -683,10 +683,10 @@ mex_ok_interface('uwi');
                             i
                             for iy=1:4
                                 for ix=1:4
-                                    %C885.move_x(XPOS+ix*0.1);
+                                    C885.move_x(XPOS+ix*0.1);
                                     mex_ok_interface('ati', 64, 1);% activate trigger
                                     mex_ok_interface('ati', 64, 2);% activate trigger
-                                    pause(0.5)
+                                    pause((0.002*hdata.pulse.laser_low_time2)+0.8)
                                 end
                                 C885.move_y(YPOS+iy*0.1);
                             end
@@ -1149,7 +1149,7 @@ end
             Spin_pulse.Step = 1;
             Spin_pulse.Limits = [0 4000];
             Spin_pulse.Position = [100 467 58 35];
-            Spin_pulse.Value = (2*hdata.pulse.laser_low_time1)-(+hdata.pulse.laser_shutter_delay1+hdata.pulse.laser_shutter_delay2);
+            Spin_pulse.Value = (2*hdata.pulse.laser_low_time1)-(hdata.pulse.laser_shutter_delay1+hdata.pulse.laser_shutter_delay2);
 
             % Create NoshotsSpinnerLabel
             NoshotsSpinnerLabel = uilabel(ShootingPanel);
