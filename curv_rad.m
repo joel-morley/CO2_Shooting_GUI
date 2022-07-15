@@ -1,18 +1,12 @@
-function r = curv_rad(Sample)
+function [r, flat] = curv_rad(Sample)
 G = @(ps,x) ps(1)*exp(-((x-ps(2))/ps(3)).^2/2)+ps(4); % Gaussian function to fit the data to
 
-%% crop the data to within the rim (glass plate surface)
-% [pks,locs,w,p] = findpeaks(-(Sample(:,2)-max(Sample(:,2))),...
-%                             'MinPeakHeight',0.7*max(Sample(:,2)),...
-%                             'MinPeakProminence',0.3*max(Sample(:,2)),...
-%                             'MinPeakDistance',250,...
-%                             'WidthReference', 'halfprom');
-
-[pks,locs,w,p] = findpeaks(-(Sample(:,2)-max(Sample(:,2))),...
+[pks,locs,w,p] = findpeaks(-(Sample(:,2)-max(Sample(:,2))),... % find position and width of milling shape
                             'MinPeakDistance',250,...
                             'MinPeakProminence',0.1*max(Sample(:,2)));
 
-if size(pks,1) == 0
+if size(pks,1) == 0 % if reconstructing a flat surface, don't proceed with fitting a curve
+    flat = 1;
     fig_slice = newfig('Cross Section');
         set(gcf,'Position',[750 610 1150 400])
         plt = findobj(fig_slice, 'type', 'axes');
@@ -26,18 +20,12 @@ if size(pks,1) == 0
 
 xlabel('x (um)')
 ylabel('Height (um)')
-else
+else % if peaks are found crop data to focus on the central part of depression (1.5*sigma
+flat = 0;
 sigma_idx = round(w/2);
 data_fit= Sample(round(locs-1.5*sigma_idx):locs+round(1.5*sigma_idx),2);
 x_fit = Sample(locs-1.5*sigma_idx:locs+1.5*sigma_idx,1);
     
-% data_fit= Sample(locs(1):locs(2),2);
-% x_fit = Sample(locs(1):locs(2),1);
-% rim_radius = (Sample(locs(2))-Sample(locs(1)))/2;
-% centre_index = round(locs(1)+((locs(2)-locs(1))/2));
-% data_fit= Sample(-30:30,2);
-% x_fit = Sample(-30:30,1);
-
 %% fit a Gaussian
 % Estimate parameters
 x0 = Sample(locs);
@@ -73,7 +61,7 @@ theta = linspace(circle_limit_low ,circle_limit_high,100);
 hold on
 plot(plt_cross_section,circle_cent_x + r*cos(theta),circle_cent_y + r*sin(theta),'-')
 hold off
-text(0.8*circle_cent_x,max(Sample(:,2)),sprintf('r= %.3f um',r))%print radius
+text(0.8*circle_cent_x,Sample(200,2),sprintf('r= %.3f um',r))%print radius
 xlabel('x (um)')
 ylabel('Height (um)')
 end
