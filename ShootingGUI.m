@@ -555,16 +555,6 @@ mex_ok_interface('uwi');
             guidata(fig,hdata);
         end
     
-        % Value changed function: NoringsSpinner
-        function NoringsSpinnerValueChanged(fig, event, hdata)
-            value = NoringsSpinner.Value;
-            hdata = guidata(fig);
-            hdata.mill.n_rings = value;
-            guidata(fig,hdata);
-            dotmillingschematic();
-            plot_milling();
-        end
-    
         % Value changed function: ShotDelaySpinner
         function ShotDelaySpinnerValueChanged(app, event)
             value = ShotDelaySpinner.Value;
@@ -572,57 +562,12 @@ mex_ok_interface('uwi');
             hdata.mill.shot_delay = value;
             guidata(fig,hdata);            
         end
-    
-        % Value changed function: FreqSpinner
-        function FreqSpinnerValueChanged(fig, event, hdata)
-            value = FreqSpinner.Value;
-            hdata = guidata(fig);
-            hdata.mill.n_shots = value;
-            guidata(fig,hdata);
-            dotmillingschematic();
-            plot_milling();
-        end
-    
-        % Value changed function: RotSpinner
-        function RotSpinnerValueChanged(fig, event, hdata)
-            value = RotationSpinner.Value;
-            hdata = guidata(fig);
-            hdata.mill.rot = value;
-            guidata(fig,hdata);
-            dotmillingschematic();
-            plot_milling();
-        end
-    
-        % Value changed function: RotSpinner
-        function RadSpinnerValueChanged(fig, event, hdata)
-            value = RadiusSpinner.Value;
-            hdata = guidata(fig);
-            hdata.mill.rad = value;
-            guidata(fig,hdata);
-            dotmillingschematic();
-            plot_milling();
-        end
-    
-        % Value changed function: AngleSpinner
-        function AngleSpinnerValueChanged(fig, event)
-            value = AngleSpinner.Value;
-            hdata = guidata(fig);
-            hdata.mill.ecc_angle = value;
-            guidata(fig,hdata);
-            dotmillingschematic();
-            plot_milling();
-        end
 
-        % Value changed function: RadiiratioSpinner
-        function RadiiratioSpinnerValueChanged(fig, event, hdata)
-            value = RadiiratioSpinner.Value;
-            hdata = guidata(fig);
-            hdata.mill.ecc_degree = value;
-            guidata(fig,hdata);
-            dotmillingschematic();
-            plot_milling();
+        % Button pushed function: MillingPatternButton
+        function MillingPatternButtonPushed(app, event)
+            Mill_pattern_GUI()
         end
-
+    
         % Value changed function: beam_x
         function beam_xValueChanged(fig, event)
             value = beam_xEditField.Value
@@ -776,85 +721,85 @@ end
 %     end
 % end
 
-function [x_dot, y_dot] = dotmillingschematic()
-    hdata = guidata(fig);
-    fiber_r = hdata.mill.rad/0.329; % Fiber radius in mm (approx)
-    r_list = round(linspace(0,fiber_r,2+hdata.mill.n_rings));
-    r_list(1) = [];
-    r_list(size(r_list,2)) = [];
-    deg_of_ecc = hdata.mill.ecc_degree;
-    phi = hdata.mill.ecc_angle; % angle of ellipse
-    rx = r_list.*deg_of_ecc;
-    ry = r_list;
-    for r_idx = 1:hdata.mill.n_rings % Generate values for x and y, each loop is for each ring of milling pattern
-    r = @(theta) (rx*ry*(r_list(r_idx)^2))./(sqrt(((rx*r_list(r_idx))^2)*sin((phi*pi/180)+theta).^2+((ry*r_list(r_idx))^2)*cos((phi*pi/180)+theta).^2));
-    theta(r_idx,:)=linspace(0+(hdata.mill.rot*r_idx),...
-                            (2*pi+(hdata.mill.rot*r_idx))-((2*pi+(hdata.mill.rot*r_idx))/hdata.mill.n_shots),...
-                            hdata.mill.n_shots);
-    dyn_r = sqrt((rx(r_idx).*cos(theta(r_idx,:))).^2+(ry(r_idx).*sin(theta(r_idx,:))).^2);
-    xp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*cos(phi*pi/180))-(ry(r_idx).*sin(theta(r_idx,:)).*sin(phi*pi/180));
-    yp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*sin(phi*pi/180))+(ry(r_idx).*sin(theta(r_idx,:)).*cos(phi*pi/180));
-    end
-
-    if hdata.mill.style == 0
-        x_dot = permute(xp, [1 2]); % Shoot radially
-        y_dot = permute(yp, [1 2]);
-        else
-        x_dot = permute(xp, [2 1]); % Shoot concentrically
-        y_dot = permute(yp, [2 1]);
-    end
-    hdata.mill.x_dot = -x_dot(:); 
-    hdata.mill.y_dot = -y_dot(:);
-    if hdata.mill.direction == 0 % Determine milling direction
-        else
-        hdata.mill.x_dot = flip(hdata.mill.x_dot);
-        hdata.mill.y_dot = flip(hdata.mill.y_dot);
-    end
-    switch RandomSwitch.Value
-    case 'Off'
-    case 'On'
-        ring = length(hdata.mill.x_dot)/hdata.mill.n_rings;
-        section =ring/3;
-        idx = ones(1,length(hdata.mill.x_dot));
-        for i = 2:length(hdata.mill.x_dot)
-            if idx(i-1)+section > ring
-                if i > ring 
-                	if i > 2*ring
-                        idx(i) = idx(i-ring)+ring;
-                        else
-                        idx(i) = idx(i-ring)+ring;
-                    end
-                    else
-                    idx(i) = i-(2*((i-1)/3));
-                end
-                else
-                idx(i) = idx(i-1)+section;
-            end
-        end
-    %if hdata.mill.random == 0 % Make milling pattern random or maximally separated
-        %else
-        %rand_list = randperm(length(hdata.mill.x_dot));
-%         hdata.mill.x_dot = hdata.mill.x_dot(rand_list);
-%         hdata.mill.y_dot = hdata.mill.y_dot(rand_list); 
-
-
-
-        hdata.mill.x_dot = hdata.mill.x_dot(idx);
-        hdata.mill.y_dot = hdata.mill.y_dot(idx);
-    end 
-    guidata(fig,hdata);    
-end
-
-function plot_milling()
-hdata = guidata(fig);
-hdata.mill.totalshots = hdata.mill.n_rings*hdata.mill.n_shots;
-f = linspace(1,10,hdata.mill.totalshots);
-xc=968;
-yc=548;
-hdata.mill_plot = scatter(gridax, (xc+hdata.mill.x_dot(:))',(yc+hdata.mill.y_dot(:))',[],'+','LineWidth',2,'CData',f);
-drawcircle(gridax,'Center',[968,548],'Radius',200,'Color','k','FaceAlpha',0.01,'LineWidth',0.1,'MarkerSize',0.1);
-guidata(fig,hdata)
-end
+% function [x_dot, y_dot] = dotmillingschematic()
+%     hdata = guidata(fig);
+%     fiber_r = hdata.mill.rad/0.329; % Fiber radius in mm (approx)
+%     r_list = round(linspace(0,fiber_r,2+hdata.mill.n_rings));
+%     r_list(1) = [];
+%     r_list(size(r_list,2)) = [];
+%     deg_of_ecc = hdata.mill.ecc_degree;
+%     phi = hdata.mill.ecc_angle; % angle of ellipse
+%     rx = r_list.*deg_of_ecc;
+%     ry = r_list;
+%     for r_idx = 1:hdata.mill.n_rings % Generate values for x and y, each loop is for each ring of milling pattern
+%     r = @(theta) (rx*ry*(r_list(r_idx)^2))./(sqrt(((rx*r_list(r_idx))^2)*sin((phi*pi/180)+theta).^2+((ry*r_list(r_idx))^2)*cos((phi*pi/180)+theta).^2));
+%     theta(r_idx,:)=linspace(0+(hdata.mill.rot*r_idx),...
+%                             (2*pi+(hdata.mill.rot*r_idx))-((2*pi+(hdata.mill.rot*r_idx))/hdata.mill.n_shots),...
+%                             hdata.mill.n_shots);
+%     dyn_r = sqrt((rx(r_idx).*cos(theta(r_idx,:))).^2+(ry(r_idx).*sin(theta(r_idx,:))).^2);
+%     xp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*cos(phi*pi/180))-(ry(r_idx).*sin(theta(r_idx,:)).*sin(phi*pi/180));
+%     yp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*sin(phi*pi/180))+(ry(r_idx).*sin(theta(r_idx,:)).*cos(phi*pi/180));
+%     end
+% 
+%     if hdata.mill.style == 0
+%         x_dot = permute(xp, [1 2]); % Shoot radially
+%         y_dot = permute(yp, [1 2]);
+%         else
+%         x_dot = permute(xp, [2 1]); % Shoot concentrically
+%         y_dot = permute(yp, [2 1]);
+%     end
+%     hdata.mill.x_dot = -x_dot(:); 
+%     hdata.mill.y_dot = -y_dot(:);
+%     if hdata.mill.direction == 0 % Determine milling direction
+%         else
+%         hdata.mill.x_dot = flip(hdata.mill.x_dot);
+%         hdata.mill.y_dot = flip(hdata.mill.y_dot);
+%     end
+%     switch RandomSwitch.Value
+%     case 'Off'
+%     case 'On'
+%         ring = length(hdata.mill.x_dot)/hdata.mill.n_rings;
+%         section =ring/3;
+%         idx = ones(1,length(hdata.mill.x_dot));
+%         for i = 2:length(hdata.mill.x_dot)
+%             if idx(i-1)+section > ring
+%                 if i > ring 
+%                 	if i > 2*ring
+%                         idx(i) = idx(i-ring)+ring;
+%                         else
+%                         idx(i) = idx(i-ring)+ring;
+%                     end
+%                     else
+%                     idx(i) = i-(2*((i-1)/3));
+%                 end
+%                 else
+%                 idx(i) = idx(i-1)+section;
+%             end
+%         end
+%     %if hdata.mill.random == 0 % Make milling pattern random or maximally separated
+%         %else
+%         %rand_list = randperm(length(hdata.mill.x_dot));
+% %         hdata.mill.x_dot = hdata.mill.x_dot(rand_list);
+% %         hdata.mill.y_dot = hdata.mill.y_dot(rand_list); 
+% 
+% 
+% 
+%         hdata.mill.x_dot = hdata.mill.x_dot(idx);
+%         hdata.mill.y_dot = hdata.mill.y_dot(idx);
+%     end 
+%     guidata(fig,hdata);    
+% end
+% 
+% function plot_milling()
+% hdata = guidata(fig);
+% hdata.mill.totalshots = hdata.mill.n_rings*hdata.mill.n_shots;
+% f = linspace(1,10,hdata.mill.totalshots);
+% xc=968;
+% yc=548;
+% hdata.mill_plot = scatter(gridax, (xc+hdata.mill.x_dot(:))',(yc+hdata.mill.y_dot(:))',[],'+','LineWidth',2,'CData',f);
+% drawcircle(gridax,'Center',[968,548],'Radius',200,'Color','k','FaceAlpha',0.01,'LineWidth',0.1,'MarkerSize',0.1);
+% guidata(fig,hdata)
+% end
 
 %% GUI layout
             % Create Image, must use plot axes for the image in order to also draw the
@@ -1100,8 +1045,7 @@ end
             MovetoBeamButton = uibutton(ShootingPanel, 'state','ValueChangedFcn',@ShootPositioncallback);
             MovetoBeamButton.Position = [29 557 143 54];
             MovetoBeamButton.Text = 'Move to Beam';
-            MovetoBeamButton.Value = 0;
-       
+            MovetoBeamButton.Value = 0;      
             % Create z_axis Offset SpinnerLabel
             Spin_offset_Label = uilabel(ShootingPanel);
             Spin_offset_Label.HorizontalAlignment = 'right';
@@ -1112,8 +1056,7 @@ end
             Spin_offset.Step = 0.1;
             Spin_offset.Limits = [-4 4];
             Spin_offset.Position = [100 510 58 35];
-            Spin_offset.Value = hdata.pow.offset;
-           
+            Spin_offset.Value = hdata.pow.offset;           
             % Create Pulse SpinnerLabel
             Spin_pulse_Label = uilabel(ShootingPanel);
             Spin_pulse_Label.HorizontalAlignment = 'right';
@@ -1125,7 +1068,6 @@ end
             Spin_pulse.Limits = [0 4000];
             Spin_pulse.Position = [100 467 58 35];
             Spin_pulse.Value = (2*hdata.pulse.laser_low_time1)-(hdata.pulse.laser_shutter_delay1+hdata.pulse.laser_shutter_delay2);
-
             % Create NoshotsSpinnerLabel
             NoshotsSpinnerLabel = uilabel(ShootingPanel);
             NoshotsSpinnerLabel.HorizontalAlignment = 'right';
@@ -1135,120 +1077,17 @@ end
             NoshotsSpinner = uispinner(ShootingPanel, 'ValueChangedFcn', @NoshotsSpinnerValueChanged);
             NoshotsSpinner.Limits = [1 Inf];
             NoshotsSpinner.Position = [100 426 58 35];
-            NoshotsSpinner.Value = hdata.misc.num_shots;
-
-            % Create MillingPanel
-            MillingPanel = uipanel(ShootingPanel);
-            MillingPanel.TitlePosition = 'centertop';
-            MillingPanel.Title = 'Milling';
-            MillingPanel.Position = [12 107 285 306];      
+            NoshotsSpinner.Value = hdata.misc.num_shots;     
             % Create ShotDelaySpinnerLabel
-            ShotDelaySpinnerLabel = uilabel(MillingPanel);
+            ShotDelaySpinnerLabel = uilabel(ShootingPanel);
             ShotDelaySpinnerLabel.HorizontalAlignment = 'right';
-            ShotDelaySpinnerLabel.Position = [3 255 64 22];
+            ShotDelaySpinnerLabel.Position = [32 388 64 22];
             ShotDelaySpinnerLabel.Text = 'Shot Delay';
             % Create ShotDelaySpinner
-            ShotDelaySpinner = uispinner(MillingPanel, 'ValueChangedFcn', @ShotDelaySpinnerValueChanged);
-            ShotDelaySpinner.Position = [69 253 62 25];
+            ShotDelaySpinner = uispinner(ShootingPanel, 'ValueChangedFcn', @ShotDelaySpinnerValueChanged);
+            ShotDelaySpinner.Position = [100 380 58 35];
             ShotDelaySpinner.Value = hdata.mill.shot_delay;
             ShotDelaySpinner.Step = 0.1;
-            % Create NoringsSpinnerLabel
-            NoringsSpinnerLabel = uilabel(MillingPanel);
-            NoringsSpinnerLabel.HorizontalAlignment = 'right';
-            NoringsSpinnerLabel.Position = [14 218 53 22];
-            NoringsSpinnerLabel.Text = 'No. rings';
-            % Create NoringsSpinner
-            NoringsSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @NoringsSpinnerValueChanged);
-            NoringsSpinner.Position = [72 212 58 35];
-            NoringsSpinner.Step = 1;
-            NoringsSpinner.Value = hdata.mill.n_rings;
-            % Create FreqSpinner_2Label
-            FreqSpinnerLabel = uilabel(MillingPanel);
-            FreqSpinnerLabel.HorizontalAlignment = 'right';
-            FreqSpinnerLabel.Position = [37 159 31 22];
-            FreqSpinnerLabel.Text = 'Freq.';
-            % Create FreqSpinner_2
-            FreqSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @FreqSpinnerValueChanged);
-            FreqSpinner.Position = [72 153 58 35];
-            FreqSpinner.Step = 3;
-            FreqSpinner.Value = hdata.mill.n_shots;
-            % Create RotationSpinnerLabel
-            RotationSpinnerLabel = uilabel(MillingPanel);
-            RotationSpinnerLabel.HorizontalAlignment = 'right';
-            RotationSpinnerLabel.Position = [17 101 50 22];
-            RotationSpinnerLabel.Text = 'Rotation';
-            % Create RotationSpinner
-            RotationSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @RotSpinnerValueChanged);
-            RotationSpinner.Position = [72 95 58 35];
-            RotationSpinner.Step = 0.05;
-            RotationSpinner.Value = hdata.mill.rot;
-            % Create RadiusSpinnerLabel
-            RadiusSpinnerLabel = uilabel(MillingPanel);
-            RadiusSpinnerLabel.HorizontalAlignment = 'right';
-            RadiusSpinnerLabel.Position = [22 40 43 22];
-            RadiusSpinnerLabel.Text = 'Radius';
-            % Create RadiusSpinner
-            RadiusSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @RadSpinnerValueChanged);
-            RadiusSpinner.Position = [69 33 61 37];
-            RadiusSpinner.Step = 1;
-            RadiusSpinner.Value = hdata.mill.rad;
-            % Create DirectionSwitchLabel
-            DirectionSwitchLabel = uilabel(MillingPanel);
-            DirectionSwitchLabel.HorizontalAlignment = 'center';
-            DirectionSwitchLabel.Position = [182 232 53 22];
-            DirectionSwitchLabel.Text = 'Direction';
-            % Create DirectionSwitch
-            DirectionSwitch = uiswitch(MillingPanel, 'slider','ValueChangedFcn',@DirectionSwitchValueChanged);
-            DirectionSwitch.Items = {'Winter', 'Summer'};
-            DirectionSwitch.Position = [185 254 45 20];
-            DirectionSwitch.Value = 'Winter';
-            % Create StyleSwitchLabel
-            StyleSwitchLabel = uilabel(MillingPanel);
-            StyleSwitchLabel.HorizontalAlignment = 'center';
-            StyleSwitchLabel.Position = [181 167 53 22];
-            StyleSwitchLabel.Text = 'Style';
-            % Create StyleSwitch
-            StyleSwitch = uiswitch(MillingPanel, 'slider','ValueChangedFcn',@StyleSwitchValueChanged);
-            StyleSwitch.Items = {'Radial', 'C.centric'};
-            StyleSwitch.Position = [183 194 45 20];
-            StyleSwitch.Value = 'Radial';
-            % Create RandomSwitchLabel
-            RandomSwitchLabel = uilabel(MillingPanel);
-            RandomSwitchLabel.HorizontalAlignment = 'center';
-            RandomSwitchLabel.Position = [181 111 100 22];
-            RandomSwitchLabel.Text = 'Consecutive';
-            % Create RandomSwitch
-            RandomSwitch = uiswitch(MillingPanel, 'slider','ValueChangedFcn',@RandomSwitchValueChanged);
-            RandomSwitch.Items = {'On', 'Off'};
-            RandomSwitch.Position = [186 134 45 20];
-            RandomSwitch.Value = hdata.mill.random;
-
-            % Create EccentricityPanel
-            EccentricityPanel = uipanel(MillingPanel);
-            EccentricityPanel.TitlePosition = 'centertop';
-            EccentricityPanel.Title = 'Eccentricity';
-            EccentricityPanel.Position = [139 8 140 104];
-            % Create AngleSpinnerLabel
-            AngleSpinnerLabel = uilabel(EccentricityPanel);
-            AngleSpinnerLabel.HorizontalAlignment = 'right';
-            AngleSpinnerLabel.Position = [28 11 36 22];
-            AngleSpinnerLabel.Text = 'Angle';
-            % Create AngleSpinner
-            AngleSpinner = uispinner(EccentricityPanel, 'ValueChangedFcn', @AngleSpinnerValueChanged);
-            AngleSpinner.Limits = [0 270];
-            AngleSpinner.Position = [75 5 58 35];
-            AngleSpinner.Value = hdata.mill.ecc_angle;
-            % Create RadiiratioSpinnerLabel
-            RadiiratioSpinnerLabel = uilabel(EccentricityPanel);
-            RadiiratioSpinnerLabel.HorizontalAlignment = 'right';
-            RadiiratioSpinnerLabel.Position = [2 53 60 22];
-            RadiiratioSpinnerLabel.Text = 'Radii ratio';
-            % Create RadiiratioSpinner
-            RadiiratioSpinner = uispinner(EccentricityPanel, 'ValueChangedFcn', @RadiiratioSpinnerValueChanged);
-            RadiiratioSpinner.Step = 0.05;
-            RadiiratioSpinner.Limits = [0 2];
-            RadiiratioSpinner.Position = [75 47 58 35];
-            RadiiratioSpinner.Value = hdata.mill.ecc_degree;
             
             % Create BeamPositionPanel
             BeamPositionPanel = uipanel(ShootingPanel);
@@ -1285,6 +1124,47 @@ end
             beam_zEditField.Position = [31 16 60 35];
             beam_zEditField.Value = hdata.beam.z_pos;
             beam_zEditField.ValueDisplayFormat = '%.4f';
+            
+            % Create KEPositionPanel
+            KEPositionPanel = uipanel(ShootingPanel);
+            KEPositionPanel.TitlePosition = 'centertop';
+            KEPositionPanel.Title = 'KE Position';
+            KEPositionPanel.Position = [197 230 100 183];
+            % Create beam_xEditFieldLabel
+            knife_xEditFieldLabel = uilabel(KEPositionPanel);
+            knife_xEditFieldLabel.HorizontalAlignment = 'right';
+            knife_xEditFieldLabel.Position = [16 122 10 22];
+            knife_xEditFieldLabel.Text = 'x';
+            % Create knife_xEditField
+            knife_xEditField = uieditfield(KEPositionPanel, 'numeric','ValueChangedFcn', @knife_xValueChanged);
+            knife_xEditField.Position = [31 116 60 35];
+            knife_xEditField.Value = hdata.knife.x_pos;
+            knife_xEditField.ValueDisplayFormat = '%.4f';
+            % Create knife_yEditFieldLabel
+            knife_yEditFieldLabel = uilabel(KEPositionPanel);
+            knife_yEditFieldLabel.HorizontalAlignment = 'right';
+            knife_yEditFieldLabel.Position = [16 74 10 22];
+            knife_yEditFieldLabel.Text = 'y';
+            % Create knife_yEditField
+            knife_yEditField = uieditfield(KEPositionPanel, 'numeric','ValueChangedFcn', @knife_yValueChanged);
+            knife_yEditField.Position = [31 66 60 35];
+            knife_yEditField.Value = hdata.knife.y_pos;
+            knife_yEditField.ValueDisplayFormat = '%.4f';
+            % Create knife_zEditFieldLabel
+            knife_zEditFieldLabel = uilabel(KEPositionPanel);
+            knife_zEditFieldLabel.HorizontalAlignment = 'right';
+            knife_zEditFieldLabel.Position = [16 23 10 22];
+            knife_zEditFieldLabel.Text = 'z';
+            % Create knife_zEditField
+            knife_zEditField = uieditfield(KEPositionPanel, 'numeric', 'ValueChangedFcn', @knife_zValueChanged);
+            knife_zEditField.Position = [31 16 60 35];
+            knife_zEditField.Value = hdata.knife.z_pos;
+            knife_zEditField.ValueDisplayFormat = '%.4f';
+            
+            % Create MillingPatternButton
+            MillingPatternButton = uibutton(ShootingPanel, 'push','ButtonPushedFcn', @MillingPatternButtonPushed);;
+            MillingPatternButton.Position = [26 131 254 69];
+            MillingPatternButton.Text = 'Milling Pattern';
             
             % Create BSLampLabel
             BSLampLabel = uilabel(ShootingPanel);
