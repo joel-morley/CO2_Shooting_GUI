@@ -46,11 +46,11 @@ load(setting_file, 'hdata');
 hdata.misc.z_start_pos = AtCube.getPosition_z();
 uEye_camera(8, hdata.misc.exp); %exposure time
 
-hdata.pulse.trig_pulse_delay = 0;
+hdata.pulse.trig_pulse_delay = 10;
 hdata.pulse.shoot_trig_delay = 0;
-hdata.pulse.end_delay = 0.1;
+hdata.pulse.end_delay = 1;
 hdata.pulse.laser_shutter_delay1 = 20;
-hdata.pulse.laser_shutter_delay2 = 300;
+hdata.pulse.laser_shutter_delay2 = 600;
 
 guidata(fig,hdata)
 
@@ -268,7 +268,7 @@ mex_ok_interface('uwi');
             guidata(fig,hdata)
         end
 
-        % Button pushed function: Reconstruct Fiber
+        % Button pushed function: Reconstruct
         function Reconstruct_FiberButtonPushed(src,event)
             stop(tm)
             hdata = guidata(fig);
@@ -277,7 +277,7 @@ mex_ok_interface('uwi');
             end
             
                 if TabGroup2.SelectedTab == SurfaceTab
-                    Surface_reconstruction_fcn();
+                    Surface_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube);
                 else
                     [slice_x, slice_y, I1, hdata.surf] = Fiber_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube);
                     close(findobj('type','figure','name','Cross Section'))
@@ -686,7 +686,7 @@ mex_ok_interface('uwi');
                             case 'Single'
                                 for i=1:hdata.misc.num_shots
                                     tic;
-                                    mex_ok_interface('ati', 64, 1);% activate trigger
+%                                     mex_ok_interface('ati', 64, 1);% activate trigger
                                     mex_ok_interface('ati', 64, 2);% activate trigger
                                     pause((0.002*hdata.pulse.laser_low_time2)+hdata.mill.shot_delay)
                                     toc
@@ -701,7 +701,7 @@ mex_ok_interface('uwi');
                                     for s = 1:hdata.mill.totalshots
                                         C885.move_x(x_shoot+(hdata.mill.x_dot(s)*0.000329));
                                         C885.move_y(y_shoot+(hdata.mill.y_dot(s)*0.000329));
-                                        mex_ok_interface('ati', 64, 1);% activate trigger
+%                                         mex_ok_interface('ati', 64, 1);% activate trigger
                                         mex_ok_interface('ati', 64, 2);% activate trigger
                                         pause((0.002*hdata.pulse.laser_low_time2)+hdata.mill.shot_delay)
                                     end
@@ -729,11 +729,11 @@ mex_ok_interface('uwi');
                     disp('System not in shooting configuration')
             end
                 ShootLamp.Color = 'red';
-%                 if TabGroup2.SelectedTab == SurfaceTab
-%                     MovetoTargetButtonPushed()
-%                 else
-%                     MovetoFiberButtonPushed()
-%                 end
+                if TabGroup2.SelectedTab == SurfaceTab
+                    MovetoTargetButtonPushed()
+                else
+                    MovetoFiberButtonPushed()
+                end
                 
         end
                     
@@ -775,82 +775,6 @@ end
 %         FM(i) = fmeasure(Imcont3,'CONT',[545 968 500 500]);
 %     end
 % end
-
-function Surface_reconstruction_fcn % Function to reconstruct th surface, not the same as used for the fiber
-    hdata = guidata(fig);
-    %% 6 frame Loop for data acquisition
-    AtCube.move_z(hdata.misc.z_start_pos+(hdata.misc.lam_step*hdata.misc.lambd));
-    zstart = AtCube.getPosition_z(); %start position in mm
-    stepsize = hdata.misc.lambd/8; %stepsize in mm
-    n=6; %number of frames
-    range = (n-1)*stepsize; %range in mm
-    z_list = linspace(zstart,zstart+range,n);
-    
-    for k = 1:6 %loop to move fiber in z
-        c = z_list(k);
-        AtCube.move_z(c);
-%         z=AtCube.getPosition_z();
-            for i=1:2 %number of frames to acquire and avearge
-                Im_mono = grabImage(RCheckBox, GCheckBox, BCheckBox);
-            end
-        MeanI(:,:,k) = mean(Im_mono,3);   
-    end
-    AtCube.move_z(zstart);
-    Im_opt_cont = im2double(rescale(MeanI,0,256));
-    %% Crop image around fibre
-    image_size = 500; %Choose cropping area
-    T = 548-(image_size/2);
-    B = 548+(image_size/2);
-    L = 968-(image_size/2);
-    R = 968+(image_size/2);
-    IR_crop = Im_opt_cont(T:B,L:R,:); %crop and isolate fibre face by making background 0
-
-    %% Create phase map
-    I1=IR_crop(:,:,1);
-    I2=IR_crop(:,:,2);
-    I3=IR_crop(:,:,3);
-    I4=IR_crop(:,:,4);
-    I5=IR_crop(:,:,5);
-    I6=IR_crop(:,:,6);
-    phi2 = -atan(((3*I2-4*I4+I6)./(I1-4*I3+3*I5))); %calculate phase map
-    
-    %% Unwrap and create image of surface
-    Frame = ones(size(phi2,1),size(phi2,2));
-    [PU,~,~,~]=CPULSI(2*phi2,Frame,100,0.0001,250,250,false);
-    phase_unwrapped=0.5*PU;%Restore correct phase & remove background
-    sig = 3;
-    FilterSize = 15;
-    Im_filt=im2double(imgaussfilt(phase_unwrapped,sig,'FilterSize',FilterSize)); %% Filter
-
-    %% 3D plot
-    pixel=0.329; % Pixel FOV in um
-    [X,Y]=meshgrid(-image_size/2:image_size/2,-image_size/2:image_size/2);   % Generate 2D meshgrid full
-    x=X*pixel; %in um                   
-    y=Y*pixel; %in um
-    surface = (Im_filt./(2.*pi)).*hdata.misc.lambd; % convert phase to height in mm
-    surf_offset = surface-min(min(surface));
-    fig_surf = newfig('Surface');
-        set(gcf,'Position',[1100 320 600 400])
-        plt_surf = findobj(fig_surf, 'type', 'axes');
-        if isempty(plt_surf)
-            plt_surf = axes(fig_surf);
-        end
-    surf(plt_surf,x,y,1000*surf_offset) % Show distance calibrated results
-    daspect([1 1 0.05])
-    shading interp
-    % axis equal
-    colorbar;
-    xlabel('um')
-    ylabel('um')
-    zlabel('um')
-    slice = [x(1,:)',1000*surf_offset(:,250)];
-    try 
-        curv_rad(slice);
-    catch ME
-        disp('Could not fit curvature')
-    end
-    guidata(fig,hdata)
-end
 
 function [x_dot, y_dot] = dotmillingschematic()
     hdata = guidata(fig);
