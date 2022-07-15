@@ -550,7 +550,7 @@ mex_ok_interface('uwi');
         function FreqSpinnerValueChanged(fig, event, hdata)
             value = FreqSpinner.Value;
             hdata = guidata(fig);
-            hdata.mill.n_shots = value;
+            hdata.mill.freq = value;
             guidata(fig,hdata);
             dotmillingschematic();
             plot_milling();
@@ -834,8 +834,8 @@ function [x_dot, y_dot] = dotmillingschematic()
     for r_idx = 1:hdata.mill.n_rings % Generate values for x and y, each loop is for each ring of milling pattern
     r = @(theta) (rx*ry*(r_list(r_idx)^2))./(sqrt(((rx*r_list(r_idx))^2)*sin((phi*pi/180)+theta).^2+((ry*r_list(r_idx))^2)*cos((phi*pi/180)+theta).^2));
     theta(r_idx,:)=linspace(0+(hdata.mill.rot*r_idx),...
-                            (2*pi+(hdata.mill.rot*r_idx))-((2*pi+(hdata.mill.rot*r_idx))/hdata.mill.n_shots),...
-                            hdata.mill.n_shots);
+                            (2*pi+(hdata.mill.rot*r_idx))-((2*pi+(hdata.mill.rot*r_idx))/hdata.mill.freq),...
+                            hdata.mill.freq);
     dyn_r = sqrt((rx(r_idx).*cos(theta(r_idx,:))).^2+(ry(r_idx).*sin(theta(r_idx,:))).^2);
     xp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*cos(phi*pi/180))-(ry(r_idx).*sin(theta(r_idx,:)).*sin(phi*pi/180));
     yp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*sin(phi*pi/180))+(ry(r_idx).*sin(theta(r_idx,:)).*cos(phi*pi/180));
@@ -895,7 +895,7 @@ end
 
 function plot_milling()
 hdata = guidata(fig);
-hdata.mill.totalshots = hdata.mill.n_rings*hdata.mill.n_shots;
+hdata.mill.totalshots = hdata.mill.n_rings*hdata.mill.freq;
 f = linspace(1,10,hdata.mill.totalshots);
 xc=968;
 yc=548;
@@ -1186,7 +1186,7 @@ end
             FreqSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @FreqSpinnerValueChanged);
             FreqSpinner.Position = [72 153 58 35];
             FreqSpinner.Step = 3;
-            FreqSpinner.Value = hdata.mill.n_shots;
+            FreqSpinner.Value = hdata.mill.freq;
             % Create RotationSpinnerLabel
             RotationSpinnerLabel = uilabel(MillingPanel);
             RotationSpinnerLabel.HorizontalAlignment = 'right';
