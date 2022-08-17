@@ -1,7 +1,8 @@
-function [slice_x, slice_y, I1, surf_offset] = Fiber_reconstruction(lambd,lam_step, z_start_pos, AtCube)
+function [slice_x, slice_y, I1, surf_offset] = Fiber_reconstruction(lambd,lam_step, z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox)
 %% Loop for data acquisition
 % AtCube.move_z(z_start_pos+(lam_step*lambd));
-z_start = z_start_pos+(lam_step*lambd); %start position in mm
+%z_start = z_start_pos+(lam_step*lambd); %start position in mm
+z_start = z_start_pos+(lam_step*lambd/2); %start position in mm
 stepsize = lambd/8; %stepsize in mm
 n=6; %number of frames
 range = (n-1)*stepsize; %range in mm
@@ -12,7 +13,7 @@ for k = 1:6 %loop to move sample in z
     AtCube.move_z(c);
     z=AtCube.getPosition_z();
     for i=1:4 %number of frames to acquire and avearge
-        ImBG_autoCont = grabImage1();
+        ImBG_autoCont = grabImage(RCheckBox, GCheckBox, BCheckBox);
     end
     MeanI(:,:,k) = mean(ImBG_autoCont,3);   
 end
@@ -42,18 +43,20 @@ phi2 = -atan(((3*I2-4*I4+I6)./(I1-4*I3+3*I5))); %calculate phase map
 %% Unwrap and create image of surface with no background
 Frame = ones(size(phi2,1),size(phi2,2));
 [PU,PC,N_unwrap,t_unwrap]=CPULSI(2*phi2,Frame,100,0.1,250,250,false);
+%[PU,PC,N_unwrap,t_unwrap]=CPULSI(1*phi2,Frame,100,0.1,250,250,false);
 IR_NaN = double(Im_bw);%convert binary image to double
 IR_NaN(IR_NaN<1)=nan;%set 0s to NaN
 sig = 3;
 FilterSize = 11;
-p_unwr_filt=imgaussfilt(0.5*PU.*IR_NaN,sig,'FilterSize',FilterSize); %% Filter
-
+p_unwr_filt=flip(imgaussfilt(0.5*PU.*IR_NaN,sig,'FilterSize',FilterSize)); %% Filter
+%p_unwr_filt=imgaussfilt(PU.*IR_NaN,sig,'FilterSize',FilterSize); %% Filter
 %% 3D plot
 pixel=0.329; % Pixel FOV in um
 [X,Y]=meshgrid(-image_size/2:image_size/2,-image_size/2:image_size/2);   % Generate 2D meshgrid full
 x=X*pixel; %in um                   
 y=Y*pixel; %in um
-surface = (p_unwr_filt./(2.*pi)).*lambd; % convert phase to height in mm
+%surface = (p_unwr_filt./(2.*pi)).*lambd; % convert phase to height in mm
+surface = (p_unwr_filt./(2.*pi)).*lambd/2; % convert phase to height in mm
 surf_offset = surface-min(min(surface));
 fig_surf = newfig('Fiber Surface');
         set(gcf,'Position',[1250 250 600 400])

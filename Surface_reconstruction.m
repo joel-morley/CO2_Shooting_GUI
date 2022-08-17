@@ -1,7 +1,8 @@
-function Surface_reconstruction_fcn(lambd,lam_step, z_start_pos, AtCube) % Function to reconstruct th surface, not the same as used for the fiber
-    hdata = guidata(fig);
+function Surface_reconstruction_fcn(lambd,lam_step, z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox) % Function to reconstruct th surface, not the same as used for the fiber
+    %hdata = guidata(fig);
     %% 6 frame Loop for data acquisition
-    AtCube.move_z(z_start_pos+(lam_step*lambd));
+    %AtCube.move_z(z_start_pos+(lam_step*lambd));
+    AtCube.move_z(z_start_pos+(lam_step*lambd/2));
     zstart = AtCube.getPosition_z(); %start position in mm
     stepsize = lambd/8; %stepsize in mm
     n=6; %number of frames
@@ -42,7 +43,7 @@ function Surface_reconstruction_fcn(lambd,lam_step, z_start_pos, AtCube) % Funct
     phase_unwrapped=0.5*PU;%Restore correct phase & remove background
     sig = 3;
     FilterSize = 15;
-    Im_filt=im2double(imgaussfilt(phase_unwrapped,sig,'FilterSize',FilterSize)); %% Filter
+    Im_filt=flip(im2double(imgaussfilt(phase_unwrapped,sig,'FilterSize',FilterSize))); %% Filter
 
     %% 3D plot
     pixel=0.329; % Pixel FOV in um

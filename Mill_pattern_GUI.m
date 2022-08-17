@@ -1,4 +1,4 @@
-function Mill_pattern_GUI(varargin)
+function [shot_pos_x, shot_pos_y, n_pos] = Mill_pattern_GUI(varargin)
     
             % Create UIFigure and hide until all components are created
             UIFigure = uifigure('Visible', 'off');
@@ -29,13 +29,31 @@ function Mill_pattern_GUI(varargin)
 %     milldata.y5 = ones(1,6);
 %     milldata.y6 = ones(1,6);
 %     milldata.y1 = ones(1,6);
-
-    guidata(UIFigure,milldata)
-
+    shot_pos_x = milldata.x_dot;
+    shot_pos_y = milldata.y_dot;
+    n_pos = length(milldata.x_dot);
+    guidata(UIFigure,milldata);
 
         % Button pushed function: SaveButton
         function SaveButtonPushed(UIFigure, event)
             save(setting_file, 'milldata');
+            n_pos = sum(milldata.freq);
+            h = findobj('Tag','Fiber Machining');
+            hdata = guidata(h);
+            hdata.mill.x_dot = 3.29*milldata.x_dot;
+            hdata.mill.y_dot = 3.29*milldata.y_dot;
+            hdata.mill.totalshots = length(milldata.x_dot);
+            func=getappdata(h,'fun_handles');
+            guidata(h,hdata);
+            fprintf('Frequency is: [');
+            fprintf('%g, ', milldata.freq(1:milldata.n_rings-1));
+            fprintf('%g]\n', milldata.freq(milldata.n_rings));
+            fprintf('Radius is: [');
+            fprintf('%g, ', milldata.rad(1:milldata.n_rings-1));
+            fprintf('%g]\n', milldata.rad(milldata.n_rings));
+            fprintf('Frequency is: [');
+            fprintf('%g, ', milldata.rot(1:milldata.n_rings-1));
+            fprintf('%g]\n', milldata.rot(milldata.n_rings));
         end
     
         % Value changed function: RingDropDown
@@ -199,7 +217,7 @@ function Mill_pattern_GUI(varargin)
     
     finalarray_x=[];
     finalarray_y=[];
-    for idx = 1:NoringsSpinner.Value % put x and y values from a table of values separating rings into an x and y list to be exported to the the GUI data
+    for idx = 1:milldata.n_rings % put x and y values from a table of values separating rings into an x and y list to be exported to the the GUI data
         finalarray_x = [finalarray_x, milldata.x_pos{idx}];
         finalarray_y = [finalarray_y, milldata.y_pos{idx}];
         milldata.x_dot = finalarray_x;
@@ -219,16 +237,17 @@ function Mill_pattern_GUI(varargin)
         f = linspace(0,10,length( milldata.x_dot));
         xc=0;
         yc=0;
-        hold( UIAxes, 'on');
-        drawcircle(UIAxes,'Center',[0,0],'Radius',60,'Color','w','FaceAlpha',0.1,'LineWidth',2,'MarkerSize',2);
+        
+        %hold( UIAxes, 'on');
         switch LineSwitch.Value
             case 'Line'
             milldata.mill_plot = plot(UIAxes, milldata.x_dot, milldata.y_dot','LineWidth', 0.5, 'Marker', '+', 'MarkerSize',5, 'MarkerEdgeColor', 'red');
             case 'Points'
             milldata.mill_plot = scatter(UIAxes, milldata.x_dot, milldata.y_dot',[],'+','LineWidth',2,'CData',f);
         end
-        hold( UIAxes, 'off');
-        guidata(UIFigure,milldata)
+        drawcircle(UIAxes,'Center',[0,0],'Radius',60,'Color','w','FaceAlpha',0.1,'LineWidth',2,'MarkerSize',2);
+        %hold( UIAxes, 'off');
+        guidata(UIFigure,milldata);
     end
     
     %% GUI Layout
@@ -321,6 +340,7 @@ function Mill_pattern_GUI(varargin)
         AngleSpinner = uispinner(EccentricityPanel, 'ValueChangedFcn', @AngleSpinnerValueChanged);
         AngleSpinner.Position = [56 9 58 22];
         AngleSpinner.Value = milldata.ecc_angle;
+        AngleSpinner.Step = 0.05;
 
         % Create RingDropDownLabel
         RingDropDownLabel = uilabel(UIFigure);
@@ -354,13 +374,13 @@ function Mill_pattern_GUI(varargin)
         UIAxes.Color = 'black';
         plot_milling()
 
-        % Show the UIFigureure after all components are created
+        % Show the UIFigure after all components are created
         UIFigure.Visible = 'on';
 
         % Construct UIFigure
         function UIFigure = Mill_pattern
 
-            % Create UIUIFigureure and components
+            % Create UIFigure and components
             createComponents(UIFigure)
 
             % Register the UIFigure with UIFigure Designer
@@ -374,7 +394,7 @@ function Mill_pattern_GUI(varargin)
         % Code that executes before UIFigure deletion
         function delete(UIFigure)
 
-            % Delete UIUIFigureure when UIFigure is deleted
+            % Delete UIFigure when UIFigure is deleted
             delete(UIFigure)
         end
 end
