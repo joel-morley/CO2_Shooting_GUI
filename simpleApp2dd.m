@@ -2,6 +2,7 @@ function simpleApp2dd(varargin)
 %% Startup Processes
 
 uEye_camera(0); % initializing camera
+uEye_camera(8, 5); %exposure time
 pause(0.5)
 
 % For PI
@@ -38,21 +39,18 @@ fig.Color = [0.94 0.94 0.94];
 % fig.Position = [100 100 1571 686];
 fig.Position = [385 370 1530 678];
 fig.Name = 'Fiber Machining';
-fig.Tag = 'Fiber Machining';
-fig.HandleVisibility = 'on'
 
 %% Begin assembling data structure for configuration
 hdata = guidata(fig);
 setting_file = 'shoot_settings.mat';
 load(setting_file, 'hdata');
 hdata.misc.z_start_pos = AtCube.getPosition_z();
-uEye_camera(8, hdata.misc.exp); %exposure time
+hdata.misc.grid = 0;
+hdata.misc.shoot = 0;
 
-hdata.pulse.trig_pulse_delay = 10;
-hdata.pulse.shoot_trig_delay = 0;
-hdata.pulse.end_delay = 1;
-hdata.pulse.laser_shutter_delay1 = 20;
-hdata.pulse.laser_shutter_delay2 = 600;
+hdata.pulse.laser_width = 0;
+hdata.pulse.laser_shutter_delay1 = 2;
+hdata.pulse.laser_shutter_delay2 = 2;
 
 guidata(fig,hdata)
 
@@ -73,6 +71,7 @@ BCheckBox.Position = [961 585 31 37];
 BCheckBox.Value = 1;
 Im = grabImage(RCheckBox, GCheckBox, BCheckBox);
 hdata.misc.Image = uint8(Im);
+
 % Initialise FPGA
 mex_ok_interface('swi', 0, hdata.pulse.shoot_trig_delay*10);
 mex_ok_interface('swi', 1, hdata.pulse.trig_pulse_delay*10);
@@ -102,7 +101,6 @@ mex_ok_interface('uwi');
             min = sprintfc('%02d', time(1,5));
             folder = append(year, month, day);
             file = append(hour, min);
-            cleave_tension = CleaveTensionSpinner.Value;
 
             if ~exist(char(fullfile(dir, folder)), 'dir')
             mkdir(char(fullfile(dir, folder)))
@@ -115,35 +113,25 @@ mex_ok_interface('uwi');
             pltcross = findobj('type','figure','name','Cross Section');
 
             if ~isempty(findobj('type','figure','name','Fiber Surface'))
-                imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir, folder, file),'.tif')))
-                imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir2, folder, file),'.tif')))
-                saveas(pltsurf, char(strcat(fullfile(dir, folder, file),'surf.fig')))
-                saveas(pltsurf, char(strcat(fullfile(dir2, folder, file),'surf.fig')))
-                Surface = hdata.surf;
-                save(char(strcat(fullfile(dir, folder, file),'.mat')),'Surface')
-                save(char(strcat(fullfile(dir2, folder, file),'.mat')),'Surface')
-                saveas(pltcross, char(strcat(fullfile(dir, folder, file),'cross.fig')))
-                saveas(pltcross, char(strcat(fullfile(dir2, folder, file),'cross.fig')))
-                if hdata.misc.flat == 1
-                    imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir2, 'Cleaving Face',num2str(cleave_tension), file),'.tif')))
-                    saveas(pltsurf, char(strcat(fullfile(dir2, 'Cleaving Face',num2str(cleave_tension), file),'surf.fig')))
-                    save(char(strcat(fullfile(dir2, 'Cleaving Face',num2str(cleave_tension), file),'.mat')),'Surface')
-                    saveas(pltcross, char(strcat(fullfile(dir2, 'Cleaving Face',num2str(cleave_tension), file),'cross.fig')))
-                end
+            imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir, folder, file),'.tif')))
+            saveas(pltsurf, char(strcat(fullfile(dir, folder, file),'surf.fig')))
+            Surface = hdata.surf;
+            save(char(strcat(fullfile(dir, folder, file),'.mat')),'Surface')
+            saveas(pltcross, char(strcat(fullfile(dir, folder, file),'cross.fig')))
             else
-                imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir, folder, file),'pre.tif')))
+            imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir, folder, file),'pre.tif')))
+            end
+            if ~isempty(findobj('type','figure','name','Fiber Surface'))
+            imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir2, folder, file),'.tif')))
+            saveas(pltsurf, char(strcat(fullfile(dir2, folder, file),'surf.fig')))
+            Surface = hdata.surf;
+            save(char(strcat(fullfile(dir2, folder, file),'.mat')),'Surface')
+            saveas(pltcross, char(strcat(fullfile(dir2, folder, file),'cross.fig')))
+            else
+            imwrite(uint8(hdata.misc.Image(298:798,718:1218)), char(strcat(fullfile(dir2, folder, file),'pre.tif')))
             end
         end
 
-        % Value changing function: CleaveTensionSpinner
-        function CleaveTensionSpinnerValueChanged(app, event)
-            value = CleaveTensionSpinner.Value;
-            hdata = guidata(fig);
-            hdata.misc.cleave_tension = value;
-            guidata(fig,hdata)
-            
-        end
-    
         % Button pushed function: CloseButton
         function CloseButtonPushed(fig, event)
             stop(tm);
@@ -209,25 +197,14 @@ mex_ok_interface('uwi');
             AtCube.move_z(zdata(Ind));
             start(tm)
         end
-    
-        % Value changing function: ExposuremsSpinner
-        function ExposuremsSpinnerValueChanged(app, event)
-            value = ExposuremsSpinner.Value;
-            hdata = guidata(fig);
-            hdata.misc.exp = value;
-            uEye_camera(8, hdata.misc.exp); %exposure time
-            guidata(fig,hdata)
-            
-        end
-    
+     
         % Button pushed function:  Max Contrast
         function Find_max_contrast(src,event)
             
             hdata = guidata(fig);
             sample_c = [548,968]; % sample centre, pixels
             sample_a = 10; % sample width/height, pixels
-            hdata.misc.lambd = 570*10^(-6); %wavelegth*2?
-            %hdata.misc.lambd = 283*10^(-6); %
+            hdata.misc.lambd = 570*10^(-6);
             steps = hdata.misc.lambd/5; %range in mm
             zstart = AtCube.getPosition_z(); %start position in mm
             n = 40; %number of frames
@@ -256,29 +233,6 @@ mex_ok_interface('uwi');
                 plt_cont = axes(fig_cont);
             end
             plot(plt_cont,z_list,normalize(contrast),z_list,normalize(Gauss(params,z_list)))
-            
-            
-            
-%             N = normalize(contrast);
-%             Nt = N.';
-%             z_listt = z_list.';
-%             interference = cat(2, z_listt, Nt);
-%             dir = 'C:\Users\co2la\Documents\Data';
-%             time = clock;
-%             year = sprintf('%.0f',time(1,1));
-%             month = sprintfc('%02d', time(1,2));
-%             day = sprintfc('%02d', time(1,3));
-%             hour = sprintf('%.0f',time(1,4));
-%             min = sprintfc('%02d', time(1,5));
-%             folder = append(year, month, day);
-%             file = append(hour, min);
-                 
-            
-            %writematrix(interference,char(strcat(fullfile(dir, folder, file),'normalize.csv')));
-            %export(normalize(contrast),'XLSFile','normalize.xlsx')
-            
-            
-            
             hdata.misc.z_start_pos = params(2);
             disp(hdata.misc.z_start_pos)
 %             AtCube.move_z(hdata.misc.z_start_pos);
@@ -294,7 +248,7 @@ mex_ok_interface('uwi');
             guidata(fig,hdata)
         end
 
-        % Button pushed function: Reconstruct
+        % Button pushed function: Reconstruct Fiber
         function Reconstruct_FiberButtonPushed(src,event)
             stop(tm)
             hdata = guidata(fig);
@@ -303,13 +257,13 @@ mex_ok_interface('uwi');
             end
             
                 if TabGroup2.SelectedTab == SurfaceTab
-                    Surface_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox);
+                    Surface_reconstruction_fcn();
                 else
-                    [slice_x, slice_y, I1, hdata.surf] = Fiber_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox);
+                    [slice_x, slice_y, I1, hdata.surf] = Fiber_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube);
                     close(findobj('type','figure','name','Cross Section'))
             try
-                    [r_curv, hdata.misc.flat] = curv_rad(slice_x);
-                    [r_curv, hdata.misc.flat] = curv_rad(slice_y);
+                    curv_rad(slice_x);
+                    curv_rad(slice_y);
             catch ME
             	display('Could not fit or measure curvature')
             end
@@ -327,7 +281,7 @@ mex_ok_interface('uwi');
         end
     
         % Value changed function: GridSwitch
-        function GridSwitchValueChanged(src, ~)
+        function GridSwitchValueChanged(src, event)
              switch src.Value
                 case 'On'
                     gridax.XGrid = 'on';
@@ -382,12 +336,12 @@ mex_ok_interface('uwi');
             hdata = guidata(fig);
             switch RandomSwitch.Value
                 case 'Off'
-                     hdata.mill.random = 'Off';
+                     hdata.mill.random = 0;
                      guidata(fig,hdata)
                      dotmillingschematic();
                      plot_milling();
                 case 'On'
-                     hdata.mill.random = 'On';
+                     hdata.mill.random = 1;
                      guidata(fig,hdata)
                      dotmillingschematic();
                      plot_milling();
@@ -492,7 +446,7 @@ mex_ok_interface('uwi');
                 C885.move_x(hdata.target.x_pos);
                 C885.move_y(hdata.target.y_pos);
                 AtCube.move_z(hdata.target.z_pos);
-                C885.move_z(24.13);
+                C885.move_z(23.9);
                 MovetoBeamButton.Value = 0;
                 disp([hdata.target.x_pos, hdata.target.y_pos, hdata.target.z_pos])
             %end
@@ -515,7 +469,7 @@ mex_ok_interface('uwi');
             C885.move_x(hdata.fiber.x_pos);
             C885.move_y(hdata.fiber.y_pos);
             AtCube.move_z(hdata.fiber.z_pos);
-            C885.move_z(24.13);
+            C885.move_z(23.9);
             disp([hdata.fiber.x_pos, hdata.fiber.y_pos, hdata.fiber.z_pos])
             MovetoBeamButton.Value = 0
         end
@@ -561,13 +515,12 @@ mex_ok_interface('uwi');
     
         % Value changed function: PulseSpinner
         function Spin_pulseValueChanged(fig, event)
+            value = Spin_pulse.Value;
             hdata = guidata(fig);
-            value = Spin_pulse.Value+hdata.pulse.laser_shutter_delay1+hdata.pulse.laser_shutter_delay2;
-            hdata.pulse.laser_low_time1 = value/2;
-            hdata.pulse.laser_low_time2 = value/2;
+            hdata.pulse.lowtime1 = value/2;
+            hdata.pulse.lowtime2 = value/2;
             % set pulse width
-            mex_ok_interface('swi', 3, hdata.pulse.laser_low_time1*10);
-            mex_ok_interface('swi', 7, hdata.pulse.laser_low_time2*10);
+            mex_ok_interface('swi', 4, hdata.pulse.laser_width*10);
             mex_ok_interface('uwi');
             guidata(fig,hdata);
         end
@@ -581,21 +534,66 @@ mex_ok_interface('uwi');
             guidata(fig,hdata);
         end
     
-        % Value changed function: ShotDelaySpinner
-        function ShotDelaySpinnerValueChanged(app, event)
-            value = ShotDelaySpinner.Value;
+        % Value changed function: NoringsSpinner
+        function NoringsSpinnerValueChanged(fig, event, hdata)
+            value = NoringsSpinner.Value;
             hdata = guidata(fig);
-            hdata.mill.shot_delay = value;
-            guidata(fig,hdata);            
-        end
-
-        % Button pushed function: MillingPatternButton
-        function MillingPatternButtonPushed(app, event)
-            hdata = guidata(fig);
-            [hdata.mill.x_dot, hdata.mill.y_dot, hdata.mill.totalshots] = Mill_pattern_GUI(fig)
+            hdata.mill.n_rings = value;
             guidata(fig,hdata);
+            dotmillingschematic();
+            plot_milling();
         end
     
+        % Value changed function: FreqSpinner
+        function FreqSpinnerValueChanged(fig, event, hdata)
+            value = FreqSpinner.Value;
+            hdata = guidata(fig);
+            hdata.mill.n_shots = value;
+            guidata(fig,hdata);
+            dotmillingschematic();
+            plot_milling();
+        end
+    
+        % Value changed function: RotSpinner
+        function RotSpinnerValueChanged(fig, event, hdata)
+            value = RotationSpinner.Value;
+            hdata = guidata(fig);
+            hdata.mill.rot = value;
+            guidata(fig,hdata);
+            dotmillingschematic();
+            plot_milling();
+        end
+    
+        % Value changed function: RotSpinner
+        function RadSpinnerValueChanged(fig, event, hdata)
+            value = RadiusSpinner.Value;
+            hdata = guidata(fig);
+            hdata.mill.rad = value;
+            guidata(fig,hdata);
+            dotmillingschematic();
+            plot_milling();
+        end
+    
+        % Value changed function: AngleSpinner
+        function AngleSpinnerValueChanged(fig, event)
+            value = AngleSpinner.Value;
+            hdata = guidata(fig);
+            hdata.mill.ecc_angle = value;
+            guidata(fig,hdata);
+            dotmillingschematic();
+            plot_milling();
+        end
+
+        % Value changed function: RadiiratioSpinner
+        function RadiiratioSpinnerValueChanged(fig, event, hdata)
+            value = RadiiratioSpinner.Value;
+            hdata = guidata(fig);
+            hdata.mill.ecc_degree = value;
+            guidata(fig,hdata);
+            dotmillingschematic();
+            plot_milling();
+        end
+
         % Value changed function: beam_x
         function beam_xValueChanged(fig, event)
             value = beam_xEditField.Value
@@ -637,12 +635,12 @@ mex_ok_interface('uwi');
             hdata = guidata(fig);
             switch ShootingSwitch.Value
                 case 'Single'
-%                      hdata.misc.shoot = 0;
-%                      guidata(fig,hdata)
+                     hdata.misc.shoot = 0;
+                     guidata(fig,hdata)
                      delete(hdata.mill_plot);
                 case 'Milling'
-%                      hdata.misc.shoot = 1;
-%                      guidata(fig,hdata)
+                     hdata.misc.shoot = 1;
+                     guidata(fig,hdata)
                      plot_milling();
             end
         end
@@ -655,30 +653,26 @@ mex_ok_interface('uwi');
                 if C885.getPosition_z() == 0
                     ShootLamp.Color = 'green';
                     if hdata.misc.grid == 0
-                        switch ShootingSwitch.Value
-                            case 'Single'
-                                for i=1:hdata.misc.num_shots
-                                    tic;
-%                                     mex_ok_interface('ati', 64, 1);% activate trigger
+                        if hdata.misc.shoot == 0
+                            for i=1:hdata.misc.num_shots
+                                mex_ok_interface('ati', 64, 1);% activate trigger
+                                mex_ok_interface('ati', 64, 2);% activate trigger
+                                pause((0.001*hdata.pulse.laser_width)+0.5)
+                            end
+                            else
+                            z_0 = AtCube.getPosition_z();
+                            x_shoot = C885.getPosition_x();
+                            y_shoot = C885.getPosition_y();
+                            %AtCube.move_z(z_0+hdata.pow.offset);
+                            for i=1:hdata.misc.num_shots
+                                for s = 1:hdata.mill.totalshots
+                                    C885.move_x(x_shoot+(hdata.mill.x_dot(s)*0.000329));
+                                    C885.move_y(y_shoot+(hdata.mill.y_dot(s)*0.000329));
+                                    mex_ok_interface('ati', 64, 1);% activate trigger
                                     mex_ok_interface('ati', 64, 2);% activate trigger
-                                    pause((0.002*hdata.pulse.laser_low_time2)+hdata.mill.shot_delay)
-                                    toc
-                                    
+                                    pause((0.001*hdata.pulse.laser_width)+1)
                                 end
-                            case 'Milling'
-                                z_0 = AtCube.getPosition_z();
-                                x_shoot = C885.getPosition_x();
-                                y_shoot = C885.getPosition_y();
-                                %AtCube.move_z(z_0+hdata.pow.offset);
-                                for i=1:hdata.misc.num_shots
-                                    for s = 1:hdata.mill.totalshots
-                                        C885.move_x(x_shoot+(hdata.mill.x_dot(s)*0.000329));
-                                        C885.move_y(y_shoot+(hdata.mill.y_dot(s)*0.000329));
-%                                         mex_ok_interface('ati', 64, 1);% activate trigger
-                                        mex_ok_interface('ati', 64, 2);% activate trigger
-                                        pause((0.002*hdata.pulse.laser_low_time2)+hdata.mill.shot_delay)
-                                    end
-                                end    
+                            end    
                         end
                     else
                         XPOS = C885.getPosition_x();
@@ -687,10 +681,10 @@ mex_ok_interface('uwi');
                             i
                             for iy=1:4
                                 for ix=1:4
-                                    C885.move_x(XPOS+ix*0.1);
+                                    %C885.move_x(XPOS+ix*0.1);
                                     mex_ok_interface('ati', 64, 1);% activate trigger
                                     mex_ok_interface('ati', 64, 2);% activate trigger
-                                    pause((0.002*hdata.pulse.laser_low_time2)+hdata.mill.shot_delay)
+                                    pause(0.5)
                                 end
                                 C885.move_y(YPOS+iy*0.1);
                             end
@@ -723,8 +717,8 @@ function ImBG_autoCont = grabImage(RCheckBox, GCheckBox, BCheckBox)
     RVal = RCheckBox.Value; % Get checkbox values for which colour channels to use
     GVal = GCheckBox.Value;
     BVal = BCheckBox.Value;
-    Im_mono = 0.55*RVal*I(:,:,2)+0.35*GVal*I(:,:,3)+0.1*BVal*I(:,:,1); % Create monochrome image from the 3 colour channels
-    ImBG_autoCont = rescale(Im_mono,0,256); % Rescale pixel values to maximise contrast, keep floating point precision
+    Im_BG = 0.55*RVal*I(:,:,2)+0.35*GVal*I(:,:,3)+0.1*BVal*I(:,:,1); % Create monochrome image from the 3 colour channels
+    ImBG_autoCont = rescale(Im_BG,0,256); % Rescale pixel values to maximise contrast, keep floating point precision
 end
 
 function updateImage(src, evt)
@@ -736,8 +730,170 @@ function updateImage(src, evt)
     guidata(fig,hdata);
 end
 
+% function [FM] = focus_scan(frames,zdata)
+%     ImBG_autoCont = ones(1096,1936,frames);
+%     for i = 1:size(zdata,2)
+%       for j = 1:frames
+%         ImBG_autoCont(:,:,j) = grabImage();
+%       end
+%         Imcont3 = mean(ImBG_autoCont,3);
+%         IR_filt=imgaussfilt(Imcont3,4,'FilterSize',11); %% Filter
+%         AtCube.move_z(zdata(i));
+%         FM(i) = fmeasure(Imcont3,'CONT',[545 968 500 500]);
+%     end
+% end
+
+function Surface_reconstruction_fcn % Function to reconstruct th surface, not the same as used for the fiber
+    hdata = guidata(fig);
+    %% 6 frame Loop for data acquisition
+    AtCube.move_z(hdata.misc.z_start_pos+(hdata.misc.lam_step*hdata.misc.lambd));
+    zstart = AtCube.getPosition_z(); %start position in mm
+    stepsize = hdata.misc.lambd/8; %stepsize in mm
+    n=6; %number of frames
+    range = (n-1)*stepsize; %range in mm
+    z_list = linspace(zstart,zstart+range,n);
+    
+    for k = 1:6 %loop to move fiber in z
+        c = z_list(k);
+        AtCube.move_z(c);
+%         z=AtCube.getPosition_z();
+            for i=1:2 %number of frames to acquire and avearge
+                Im_BG = grabImage(RCheckBox, GCheckBox, BCheckBox);
+            end
+        MeanI(:,:,k) = mean(Im_BG,3);   
+    end
+    AtCube.move_z(zstart);
+    Im_opt_cont = im2double(rescale(MeanI,0,256));
+    %% Crop image around fibre
+    image_size = 500; %Choose cropping area
+    T = 548-(image_size/2);
+    B = 548+(image_size/2);
+    L = 968-(image_size/2);
+    R = 968+(image_size/2);
+    IR_crop = Im_opt_cont(T:B,L:R,:); %crop and isolate fibre face by making background 0
+
+    %% Create phase map
+    I1=IR_crop(:,:,1);
+    I2=IR_crop(:,:,2);
+    I3=IR_crop(:,:,3);
+    I4=IR_crop(:,:,4);
+    I5=IR_crop(:,:,5);
+    I6=IR_crop(:,:,6);
+    phi2 = -atan(((3*I2-4*I4+I6)./(I1-4*I3+3*I5))); %calculate phase map
+    
+    %% Unwrap and create image of surface
+    Frame = ones(size(phi2,1),size(phi2,2));
+    [PU,~,~,~]=CPULSI(2*phi2,Frame,100,0.0001,250,250,false);
+    phase_unwrapped=0.5*PU;%Restore correct phase & remove background
+    sig = 3;
+    FilterSize = 15;
+    Im_filt=im2double(imgaussfilt(phase_unwrapped,sig,'FilterSize',FilterSize)); %% Filter
+
+    %% 3D plot
+    pixel=0.329; % Pixel FOV in um
+    [X,Y]=meshgrid(-image_size/2:image_size/2,-image_size/2:image_size/2);   % Generate 2D meshgrid full
+    x=X*pixel; %in um                   
+    y=Y*pixel; %in um
+    surface = (Im_filt./(2.*pi)).*hdata.misc.lambd; % convert phase to height in mm
+    surf_offset = surface-min(min(surface));
+    fig_surf = newfig('Surface');
+        set(gcf,'Position',[1100 320 600 400])
+        plt_surf = findobj(fig_surf, 'type', 'axes');
+        if isempty(plt_surf)
+            plt_surf = axes(fig_surf);
+        end
+    surf(plt_surf,x,y,1000*surf_offset) % Show distance calibrated results
+    daspect([1 1 0.05])
+    shading interp
+    % axis equal
+    colorbar;
+    xlabel('um')
+    ylabel('um')
+    zlabel('um')
+    slice = [x(1,:)',1000*surf_offset(:,250)];
+    try 
+        curv_rad(slice);
+    catch ME
+        disp('Could not fit curvature')
+    end
+    guidata(fig,hdata)
+end
+
+function [x_dot, y_dot] = dotmillingschematic()
+    hdata = guidata(fig);
+    fiber_r = hdata.mill.rad/0.329; % Fiber radius in mm (approx)
+    r_list = round(linspace(0,fiber_r,2+hdata.mill.n_rings));
+    r_list(1) = [];
+    r_list(size(r_list,2)) = [];
+    deg_of_ecc = hdata.mill.ecc_degree;
+    phi = hdata.mill.ecc_angle; % angle of ellipse
+    rx = r_list.*deg_of_ecc;
+    ry = r_list;
+    for r_idx = 1:hdata.mill.n_rings % Generate values for x and y, each loop is for each ring of milling pattern
+    r = @(theta) (rx*ry*(r_list(r_idx)^2))./(sqrt(((rx*r_list(r_idx))^2)*sin((phi*pi/180)+theta).^2+((ry*r_list(r_idx))^2)*cos((phi*pi/180)+theta).^2));
+    theta(r_idx,:)=linspace(0+(hdata.mill.rot*r_idx),...
+                            (2*pi+(hdata.mill.rot*r_idx))-((2*pi+(hdata.mill.rot*r_idx))/hdata.mill.n_shots),...
+                            hdata.mill.n_shots);
+    dyn_r = sqrt((rx(r_idx).*cos(theta(r_idx,:))).^2+(ry(r_idx).*sin(theta(r_idx,:))).^2);
+    xp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*cos(phi*pi/180))-(ry(r_idx).*sin(theta(r_idx,:)).*sin(phi*pi/180));
+    yp(r_idx,:)= (rx(r_idx).*cos(theta(r_idx,:)).*sin(phi*pi/180))+(ry(r_idx).*sin(theta(r_idx,:)).*cos(phi*pi/180));
+    end
+
+    if hdata.mill.style == 0
+        x_dot = permute(xp, [1 2]); % Shoot radially
+        y_dot = permute(yp, [1 2]);
+        else
+        x_dot = permute(xp, [2 1]); % Shoot concentrically
+        y_dot = permute(yp, [2 1]);
+    end
+    hdata.mill.x_dot = -x_dot(:); 
+    hdata.mill.y_dot = -y_dot(:);
+    if hdata.mill.direction == 0 % Determine milling direction
+        else
+        hdata.mill.x_dot = flip(hdata.mill.x_dot);
+        hdata.mill.y_dot = flip(hdata.mill.y_dot);
+    end 
+    if hdata.mill.random == 0 % Make milling pattern random or maximally separated
+        else
+        %rand_list = randperm(length(hdata.mill.x_dot));
+%         hdata.mill.x_dot = hdata.mill.x_dot(rand_list);
+%         hdata.mill.y_dot = hdata.mill.y_dot(rand_list); 
+
+        ring = length(hdata.mill.x_dot)/hdata.mill.n_rings;
+        section =ring/3;
+        idx = ones(1,length(hdata.mill.x_dot));
+        for i = 2:length(hdata.mill.x_dot)
+            if idx(i-1)+section > ring
+                if i > ring 
+                	if i > 2*ring
+                        idx(i) = idx(i-ring)+ring;
+                        else
+                        idx(i) = idx(i-ring)+ring;
+                    end
+                    else
+                    idx(i) = i-(2*((i-1)/3));
+                end
+                else
+                idx(i) = idx(i-1)+section;
+            end
+        end
+%         section = length(hdata.mill.x_dot)/3;
+%         for i = 2:length(hdata.mill.x_dot)
+%             if idx(i-1)+section > length(hdata.mill.x_dot)
+%                 idx(i) = i-(2*((i-1)/3));
+%             else
+%                 idx(i) = idx(i-1)+section;
+%             end
+%         end
+        hdata.mill.x_dot = hdata.mill.x_dot(idx);
+        hdata.mill.y_dot = hdata.mill.y_dot(idx);
+    end 
+    guidata(fig,hdata);    
+end
+
 function plot_milling()
-milldata = guidata(fig);
+hdata = guidata(fig);
+hdata.mill.totalshots = hdata.mill.n_rings*hdata.mill.n_shots;
 f = linspace(1,10,hdata.mill.totalshots);
 xc=968;
 yc=548;
@@ -745,8 +901,7 @@ hdata.mill_plot = scatter(gridax, (xc+hdata.mill.x_dot(:))',(yc+hdata.mill.y_dot
 drawcircle(gridax,'Center',[968,548],'Radius',200,'Color','k','FaceAlpha',0.01,'LineWidth',0.1,'MarkerSize',0.1);
 guidata(fig,hdata)
 end
-hdata.myFun1=@plot_milling;
-setappdata(fig,'fun_handles',hdata);
+
 %% GUI layout
             % Create Image, must use plot axes for the image in order to also draw the
             % alignment lines
@@ -777,29 +932,17 @@ setappdata(fig,'fun_handles',hdata);
             drawcircle(gridax,'Center',[968,548],'Radius',195,'Color','k','FaceAlpha',0.01,'LineWidth',0.1,'MarkerSize',0.1);
             tm = timer('TimerFcn', @updateImage,'Period', 0.2,'ExecutionMode','fixedSpacing','BusyMode','drop');
             start(tm);
-            
-            % Create CleaveTensionSpinnerLabel
-            CleaveTensionSpinnerLabel = uilabel(fig);
-            CleaveTensionSpinnerLabel.HorizontalAlignment = 'right';
-            CleaveTensionSpinnerLabel.Position = [325 608 38 28];
-            CleaveTensionSpinnerLabel.Text = {'Cleave'; 'Tension'};
-            % Create CleaveTensionSpinner
-            CleaveTensionSpinner = uispinner(fig, 'ValueChangedFcn',@CleaveTensionSpinnerValueChanged);
-            CleaveTensionSpinner.Step = 5;
-            CleaveTensionSpinner.Limits = [100 300];
-            CleaveTensionSpinner.Position = [370 608 55 28];
-            CleaveTensionSpinner.Value = hdata.misc.cleave_tension;
-            
+               
             % Create SaveButton
             SaveButton = uibutton(fig,'push','ButtonPushedFcn',@SaveImagecallback);
             SaveButton.Text = 'Save';
-            SaveButton.Position = [437 603 125 60];
+            SaveButton.Position = [351 603 180 60];
             
             % Create AutoCentreButton
             AutoCentreButton = uibutton(fig, 'push','ButtonPushedFcn', @AutoCentreButtonPushed);
             AutoCentreButton.FontWeight = 'bold';
             AutoCentreButton.FontColor = [0.0745 0.6235 1];
-            AutoCentreButton.Position = [573 603 140 60];
+            AutoCentreButton.Position = [573 603 180 60];
             AutoCentreButton.Text = {'Auto-Centre'; ''};
             
 %             % Create AutoFocusButton
@@ -808,18 +951,7 @@ setappdata(fig,'fun_handles',hdata);
 %             AutoFocusButton.FontColor = [0.0745 0.6235 1];
 %             AutoFocusButton.Position = [794 603 180 60];
 %             AutoFocusButton.Text = {'Auto-Focus'; ''};
-            
-            % Create ExposuremsSpinnerLabel
-            ExposuremsSpinnerLabel = uilabel(fig);
-            ExposuremsSpinnerLabel.HorizontalAlignment = 'right';
-            ExposuremsSpinnerLabel.Position = [767 608 56 27];
-            ExposuremsSpinnerLabel.Text = {'Exposure'; '(ms)'};
-            % Create ExposuremsSpinner
-            ExposuremsSpinner = uispinner(fig, 'ValueChangedFcn',@ExposuremsSpinnerValueChanged);
-            ExposuremsSpinner.Position = [830 607 62 30];
-            ExposuremsSpinner.Step = 0.2;
-            ExposuremsSpinner.Value = hdata.misc.exp;
-            
+   
             % Create CloseButton
             CloseButton = uibutton(fig, 'push','ButtonPushedFcn', @CloseButtonPushed);
             CloseButton.Position = [1015 603 180 60];
@@ -834,7 +966,7 @@ setappdata(fig,'fun_handles',hdata);
             ReconstructFiberButton = uibutton(fig,'ButtonPushedFcn', @Reconstruct_FiberButtonPushed);
             ReconstructFiberButton.FontSize = 20;
             ReconstructFiberButton.Position = [794 25 180 60];
-            ReconstructFiberButton.Text = 'Reconstruct';
+            ReconstructFiberButton.Text = 'Reconstruct Fiber';
             
             % Create StartingpositionfrommaxcontrastSpinnerLabel
             StartingpositionfrommaxcontrastSpinnerLabel = uilabel(fig);
@@ -991,7 +1123,8 @@ setappdata(fig,'fun_handles',hdata);
             MovetoBeamButton = uibutton(ShootingPanel, 'state','ValueChangedFcn',@ShootPositioncallback);
             MovetoBeamButton.Position = [29 557 143 54];
             MovetoBeamButton.Text = 'Move to Beam';
-            MovetoBeamButton.Value = 0;      
+            MovetoBeamButton.Value = 0;
+       
             % Create z_axis Offset SpinnerLabel
             Spin_offset_Label = uilabel(ShootingPanel);
             Spin_offset_Label.HorizontalAlignment = 'right';
@@ -1002,7 +1135,8 @@ setappdata(fig,'fun_handles',hdata);
             Spin_offset.Step = 0.1;
             Spin_offset.Limits = [-4 4];
             Spin_offset.Position = [100 510 58 35];
-            Spin_offset.Value = hdata.pow.offset;           
+            Spin_offset.Value = hdata.pow.offset;
+           
             % Create Pulse SpinnerLabel
             Spin_pulse_Label = uilabel(ShootingPanel);
             Spin_pulse_Label.HorizontalAlignment = 'right';
@@ -1013,7 +1147,8 @@ setappdata(fig,'fun_handles',hdata);
             Spin_pulse.Step = 1;
             Spin_pulse.Limits = [0 4000];
             Spin_pulse.Position = [100 467 58 35];
-            Spin_pulse.Value = (2*hdata.pulse.laser_low_time1)-(hdata.pulse.laser_shutter_delay1+hdata.pulse.laser_shutter_delay2);
+            Spin_pulse.Value = hdata.pulse.laser_width;
+
             % Create NoshotsSpinnerLabel
             NoshotsSpinnerLabel = uilabel(ShootingPanel);
             NoshotsSpinnerLabel.HorizontalAlignment = 'right';
@@ -1023,17 +1158,110 @@ setappdata(fig,'fun_handles',hdata);
             NoshotsSpinner = uispinner(ShootingPanel, 'ValueChangedFcn', @NoshotsSpinnerValueChanged);
             NoshotsSpinner.Limits = [1 Inf];
             NoshotsSpinner.Position = [100 426 58 35];
-            NoshotsSpinner.Value = hdata.misc.num_shots;     
-            % Create ShotDelaySpinnerLabel
-            ShotDelaySpinnerLabel = uilabel(ShootingPanel);
-            ShotDelaySpinnerLabel.HorizontalAlignment = 'right';
-            ShotDelaySpinnerLabel.Position = [32 388 64 22];
-            ShotDelaySpinnerLabel.Text = 'Shot Delay';
-            % Create ShotDelaySpinner
-            ShotDelaySpinner = uispinner(ShootingPanel, 'ValueChangedFcn', @ShotDelaySpinnerValueChanged);
-            ShotDelaySpinner.Position = [100 380 58 35];
-            ShotDelaySpinner.Value = hdata.mill.shot_delay;
-            ShotDelaySpinner.Step = 0.1;
+            NoshotsSpinner.Value = hdata.misc.num_shots;
+
+            % Create MillingPanel
+            MillingPanel = uipanel(ShootingPanel);
+            MillingPanel.TitlePosition = 'centertop';
+            MillingPanel.Title = 'Milling';
+            MillingPanel.Position = [12 107 285 306];      
+            % Create NoringsSpinnerLabel
+            NoringsSpinnerLabel = uilabel(MillingPanel);
+            NoringsSpinnerLabel.HorizontalAlignment = 'right';
+            NoringsSpinnerLabel.Position = [14 218 53 22];
+            NoringsSpinnerLabel.Text = 'No. rings';
+            % Create NoringsSpinner
+            NoringsSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @NoringsSpinnerValueChanged);
+            NoringsSpinner.Position = [72 212 58 35];
+            NoringsSpinner.Step = 1;
+            NoringsSpinner.Value = hdata.mill.n_rings;
+            % Create FreqSpinner_2Label
+            FreqSpinnerLabel = uilabel(MillingPanel);
+            FreqSpinnerLabel.HorizontalAlignment = 'right';
+            FreqSpinnerLabel.Position = [37 159 31 22];
+            FreqSpinnerLabel.Text = 'Freq.';
+            % Create FreqSpinner_2
+            FreqSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @FreqSpinnerValueChanged);
+            FreqSpinner.Position = [72 153 58 35];
+            FreqSpinner.Step = 3;
+            FreqSpinner.Value = hdata.mill.n_shots;
+            % Create RotationSpinnerLabel
+            RotationSpinnerLabel = uilabel(MillingPanel);
+            RotationSpinnerLabel.HorizontalAlignment = 'right';
+            RotationSpinnerLabel.Position = [17 101 50 22];
+            RotationSpinnerLabel.Text = 'Rotation';
+            % Create RotationSpinner
+            RotationSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @RotSpinnerValueChanged);
+            RotationSpinner.Position = [72 95 58 35];
+            RotationSpinner.Step = 0.05;
+            RotationSpinner.Value = hdata.mill.rot;
+            % Create RadiusSpinnerLabel
+            RadiusSpinnerLabel = uilabel(MillingPanel);
+            RadiusSpinnerLabel.HorizontalAlignment = 'right';
+            RadiusSpinnerLabel.Position = [22 40 43 22];
+            RadiusSpinnerLabel.Text = 'Radius';
+            % Create RadiusSpinner
+            RadiusSpinner = uispinner(MillingPanel, 'ValueChangedFcn', @RadSpinnerValueChanged);
+            RadiusSpinner.Position = [69 33 61 37];
+            RadiusSpinner.Step = 1;
+            RadiusSpinner.Value = hdata.mill.rad;
+            % Create DirectionSwitchLabel
+            DirectionSwitchLabel = uilabel(MillingPanel);
+            DirectionSwitchLabel.HorizontalAlignment = 'center';
+            DirectionSwitchLabel.Position = [182 232 53 22];
+            DirectionSwitchLabel.Text = 'Direction';
+            % Create DirectionSwitch
+            DirectionSwitch = uiswitch(MillingPanel, 'slider','ValueChangedFcn',@DirectionSwitchValueChanged);
+            DirectionSwitch.Items = {'Winter', 'Summer'};
+            DirectionSwitch.Position = [185 254 45 20];
+            DirectionSwitch.Value = 'Winter';
+            % Create StyleSwitchLabel
+            StyleSwitchLabel = uilabel(MillingPanel);
+            StyleSwitchLabel.HorizontalAlignment = 'center';
+            StyleSwitchLabel.Position = [181 167 53 22];
+            StyleSwitchLabel.Text = 'Style';
+            % Create StyleSwitch
+            StyleSwitch = uiswitch(MillingPanel, 'slider','ValueChangedFcn',@StyleSwitchValueChanged);
+            StyleSwitch.Items = {'Radial', 'C.centric'};
+            StyleSwitch.Position = [183 194 45 20];
+            StyleSwitch.Value = 'Radial';
+            % Create RandomSwitchLabel
+            RandomSwitchLabel = uilabel(MillingPanel);
+            RandomSwitchLabel.HorizontalAlignment = 'center';
+            RandomSwitchLabel.Position = [181 111 53 22];
+            RandomSwitchLabel.Text = 'Non-consecutive';
+            % Create RandomSwitch
+            RandomSwitch = uiswitch(MillingPanel, 'slider','ValueChangedFcn',@RandomSwitchValueChanged);
+            RandomSwitch.Items = {'Off', 'On'};
+            RandomSwitch.Position = [186 134 45 20];
+            RandomSwitch.Value = 'Off';
+
+            % Create EccentricityPanel
+            EccentricityPanel = uipanel(MillingPanel);
+            EccentricityPanel.TitlePosition = 'centertop';
+            EccentricityPanel.Title = 'Eccentricity';
+            EccentricityPanel.Position = [139 8 140 104];
+            % Create AngleSpinnerLabel
+            AngleSpinnerLabel = uilabel(EccentricityPanel);
+            AngleSpinnerLabel.HorizontalAlignment = 'right';
+            AngleSpinnerLabel.Position = [28 11 36 22];
+            AngleSpinnerLabel.Text = 'Angle';
+            % Create AngleSpinner
+            AngleSpinner = uispinner(EccentricityPanel, 'ValueChangedFcn', @AngleSpinnerValueChanged);
+            AngleSpinner.Limits = [0 270];
+            AngleSpinner.Position = [75 5 58 35];
+            AngleSpinner.Value = hdata.mill.ecc_angle;
+            % Create RadiiratioSpinnerLabel
+            RadiiratioSpinnerLabel = uilabel(EccentricityPanel);
+            RadiiratioSpinnerLabel.HorizontalAlignment = 'right';
+            RadiiratioSpinnerLabel.Position = [2 53 60 22];
+            RadiiratioSpinnerLabel.Text = 'Radii ratio';
+            % Create RadiiratioSpinner
+            RadiiratioSpinner = uispinner(EccentricityPanel, 'ValueChangedFcn', @RadiiratioSpinnerValueChanged);
+            RadiiratioSpinner.Step = 0.05;
+            RadiiratioSpinner.Limits = [0 2];
+            RadiiratioSpinner.Position = [75 47 58 35];
+            RadiiratioSpinner.Value = hdata.mill.ecc_degree;
             
             % Create BeamPositionPanel
             BeamPositionPanel = uipanel(ShootingPanel);
@@ -1070,47 +1298,6 @@ setappdata(fig,'fun_handles',hdata);
             beam_zEditField.Position = [31 16 60 35];
             beam_zEditField.Value = hdata.beam.z_pos;
             beam_zEditField.ValueDisplayFormat = '%.4f';
-            
-            % Create KEPositionPanel
-            KEPositionPanel = uipanel(ShootingPanel);
-            KEPositionPanel.TitlePosition = 'centertop';
-            KEPositionPanel.Title = 'KE Position';
-            KEPositionPanel.Position = [197 230 100 183];
-            % Create beam_xEditFieldLabel
-            knife_xEditFieldLabel = uilabel(KEPositionPanel);
-            knife_xEditFieldLabel.HorizontalAlignment = 'right';
-            knife_xEditFieldLabel.Position = [16 122 10 22];
-            knife_xEditFieldLabel.Text = 'x';
-            % Create knife_xEditField
-            knife_xEditField = uieditfield(KEPositionPanel, 'numeric','ValueChangedFcn', @knife_xValueChanged);
-            knife_xEditField.Position = [31 116 60 35];
-            knife_xEditField.Value = hdata.knife.x_pos;
-            knife_xEditField.ValueDisplayFormat = '%.4f';
-            % Create knife_yEditFieldLabel
-            knife_yEditFieldLabel = uilabel(KEPositionPanel);
-            knife_yEditFieldLabel.HorizontalAlignment = 'right';
-            knife_yEditFieldLabel.Position = [16 74 10 22];
-            knife_yEditFieldLabel.Text = 'y';
-            % Create knife_yEditField
-            knife_yEditField = uieditfield(KEPositionPanel, 'numeric','ValueChangedFcn', @knife_yValueChanged);
-            knife_yEditField.Position = [31 66 60 35];
-            knife_yEditField.Value = hdata.knife.y_pos;
-            knife_yEditField.ValueDisplayFormat = '%.4f';
-            % Create knife_zEditFieldLabel
-            knife_zEditFieldLabel = uilabel(KEPositionPanel);
-            knife_zEditFieldLabel.HorizontalAlignment = 'right';
-            knife_zEditFieldLabel.Position = [16 23 10 22];
-            knife_zEditFieldLabel.Text = 'z';
-            % Create knife_zEditField
-            knife_zEditField = uieditfield(KEPositionPanel, 'numeric', 'ValueChangedFcn', @knife_zValueChanged);
-            knife_zEditField.Position = [31 16 60 35];
-            knife_zEditField.Value = hdata.knife.z_pos;
-            knife_zEditField.ValueDisplayFormat = '%.4f';
-            
-            % Create MillingPatternButton
-            MillingPatternButton = uibutton(ShootingPanel, 'push','ButtonPushedFcn', @MillingPatternButtonPushed);;
-            MillingPatternButton.Position = [26 131 254 69];
-            MillingPatternButton.Text = 'Milling Pattern';
             
             % Create BSLampLabel
             BSLampLabel = uilabel(ShootingPanel);

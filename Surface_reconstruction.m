@@ -50,7 +50,7 @@ function Surface_reconstruction_fcn(lambd,lam_step, z_start_pos, AtCube, RCheckB
     [X,Y]=meshgrid(-image_size/2:image_size/2,-image_size/2:image_size/2);   % Generate 2D meshgrid full
     x=X*pixel; %in um                   
     y=Y*pixel; %in um
-    surface = (Im_filt./(2.*pi)).*lambd; % convert phase to height in mm
+    surface = (Im_filt./(2.*pi)).*lambd/2; % convert phase to height in mm
     surf_offset = surface-min(min(surface));
     fig_surf = newfig('Surface');
         set(gcf,'Position',[1100 320 600 400])
