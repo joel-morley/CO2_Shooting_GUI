@@ -66,11 +66,12 @@ function Surface_reconstruction_fcn(lambd,lam_step, z_start_pos, AtCube, RCheckB
     xlabel('um')
     ylabel('um')
     zlabel('um')
-    slice = [x(1,:)',1000*surf_offset(:,250)];
+    slice_y = [x(1,:)',1000*surf_offset(:,250)];
+    slice_x = [x(1,:)',1000*surf_offset(250,:)'];
     try 
-        curv_rad(slice);
+        curv_rad(slice_x);
+        curv_rad(slice_y);
     catch ME
         disp('Could not fit curvature')
     end
-
 end

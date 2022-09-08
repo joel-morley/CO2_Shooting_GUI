@@ -260,7 +260,7 @@ function [shot_pos_x, shot_pos_y, n_pos] = Mill_pattern_GUI(varargin)
         % Create FrequencySpinner
         FrequencySpinner = uispinner(UIFigure, 'ValueChangedFcn',@FrequencySpinnerValueChanged);
         FrequencySpinner.Position = [108 154 76 42];
-        FrequencySpinner.Limits = [1 100];
+        FrequencySpinner.Limits = [3 100];
         FrequencySpinner.Step = 3;
         FrequencySpinner.Value = milldata.freq(1);
 
@@ -331,6 +331,7 @@ function [shot_pos_x, shot_pos_y, n_pos] = Mill_pattern_GUI(varargin)
         RatioSpinner = uispinner(EccentricityPanel, 'ValueChangedFcn', @RatioSpinnerValueChanged);
         RatioSpinner.Position = [57 43 57 22];
         RatioSpinner.Value = milldata.ratio;
+        RatioSpinner.Step = 0.05;
         % Create AngleSpinnerLabel
         AngleSpinnerLabel = uilabel(EccentricityPanel);
         AngleSpinnerLabel.HorizontalAlignment = 'right';
@@ -340,7 +341,7 @@ function [shot_pos_x, shot_pos_y, n_pos] = Mill_pattern_GUI(varargin)
         AngleSpinner = uispinner(EccentricityPanel, 'ValueChangedFcn', @AngleSpinnerValueChanged);
         AngleSpinner.Position = [56 9 58 22];
         AngleSpinner.Value = milldata.ecc_angle;
-        AngleSpinner.Step = 0.05;
+        AngleSpinner.Step = 1;
 
         % Create RingDropDownLabel
         RingDropDownLabel = uilabel(UIFigure);

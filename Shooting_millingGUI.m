@@ -226,8 +226,8 @@ mex_ok_interface('uwi');
             hdata = guidata(fig);
             sample_c = [548,968]; % sample centre, pixels
             sample_a = 10; % sample width/height, pixels
-            hdata.misc.lambd = 570*10^(-6); %wavelegth*2?
-            %hdata.misc.lambd = 283*10^(-6); %
+%             hdata.misc.lambd = 570*10^(-6); %wavelegth*2
+            hdata.misc.lambd = 550*10^(-6); 
             steps = hdata.misc.lambd/5; %range in mm
             zstart = AtCube.getPosition_z(); %start position in mm
             n = 40; %number of frames
@@ -305,11 +305,12 @@ mex_ok_interface('uwi');
                 if TabGroup2.SelectedTab == SurfaceTab
                     Surface_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox);
                 else
-                    [slice_x, slice_y, I1, hdata.surf] = Fiber_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox);
-                    close(findobj('type','figure','name','Cross Section'))
+                        [slice_x, slice_y, I1, hdata.surf, hdata.misc.flat] = Fiber_reconstruction(hdata.misc.lambd, hdata.misc.lam_step, hdata.misc.z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox);
             try
-                    [r_curv, hdata.misc.flat] = curv_rad(slice_x);
-                    [r_curv, hdata.misc.flat] = curv_rad(slice_y);
+%                     [r_curv, hdata.misc.flat] = curv_rad(slice_y);
+%                     hold on
+%                     [r_curv, hdata.misc.flat] = curv_rad(slice_x);
+%                     hold off
             catch ME
             	display('Could not fit or measure curvature')
             end
@@ -492,7 +493,7 @@ mex_ok_interface('uwi');
                 C885.move_x(hdata.target.x_pos);
                 C885.move_y(hdata.target.y_pos);
                 AtCube.move_z(hdata.target.z_pos);
-                C885.move_z(24.13);
+                C885.move_z(24.508);
                 MovetoBeamButton.Value = 0;
                 disp([hdata.target.x_pos, hdata.target.y_pos, hdata.target.z_pos])
             %end
@@ -515,7 +516,7 @@ mex_ok_interface('uwi');
             C885.move_x(hdata.fiber.x_pos);
             C885.move_y(hdata.fiber.y_pos);
             AtCube.move_z(hdata.fiber.z_pos);
-            C885.move_z(24.13);
+            C885.move_z(24.508);
             disp([hdata.fiber.x_pos, hdata.fiber.y_pos, hdata.fiber.z_pos])
             MovetoBeamButton.Value = 0
         end
@@ -555,7 +556,6 @@ mex_ok_interface('uwi');
             value = Spin_offset.Value;
             hdata = guidata(fig);
             hdata.pow.offset = value;
-            disp(hdata.pow.offset)
             guidata(fig,hdata);
         end
     
@@ -1038,8 +1038,12 @@ setappdata(fig,'fun_handles',hdata);
             % Create BeamPositionPanel
             BeamPositionPanel = uipanel(ShootingPanel);
             BeamPositionPanel.TitlePosition = 'centertop';
-            BeamPositionPanel.Title = 'Beam Position';
+            BeamPositionPanel.Title = 'Beam Position (mm)';
             BeamPositionPanel.Position = [197 426 100 191];
+            % Create mmLabel
+            mmLabel = uilabel(BeamPositionPanel);
+            mmLabel.Position = [35 149 33 22];
+            mmLabel.Text = '(mm)';
             % Create beam_xEditFieldLabel
             beam_xEditFieldLabel = uilabel(BeamPositionPanel);
             beam_xEditFieldLabel.HorizontalAlignment = 'right';

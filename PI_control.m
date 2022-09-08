@@ -7,7 +7,7 @@ classdef PI_control
         axis_x = '1';
         axis_y = '5';
         axis_z = '3';
-        xyzMinMax = [80 155 0 13 0 25]
+        xyzMinMax = [40 155 0 13 0 25]
     end
     
     methods

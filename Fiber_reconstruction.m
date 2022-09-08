@@ -1,4 +1,4 @@
-function [slice_x, slice_y, I1, surf_offset] = Fiber_reconstruction(lambd,lam_step, z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox)
+function [slice_x, slice_y, I1, surf_offset, flat] = Fiber_reconstruction(lambd,lam_step, z_start_pos, AtCube, RCheckBox, GCheckBox, BCheckBox)
 %% Loop for data acquisition
 % AtCube.move_z(z_start_pos+(lam_step*lambd));
 %z_start = z_start_pos+(lam_step*lambd); %start position in mm
@@ -72,10 +72,17 @@ colorbar;
 xlabel('um')
 ylabel('um')
 zlabel('um')
-data_line_x = 1000*surf_offset(:,250);
-data_line_y = 1000*surf_offset(250,:);
+data_line_y = 1000*surf_offset(:,250);
+data_line_x = 1000*surf_offset(250,:);
 data_line_x(isnan(data_line_x)) = 0;%set NaNs to 0 in cross section
 data_line_y(isnan(data_line_y)) = 0;%set NaNs to 0 in cross sectionslice = [x(1,:)',data_line'];
-slice_x = [x(1,:)' data_line_x];
-slice_y = [x(1,:)' data_line_y'];
+slice_x = [x(1,:)' data_line_x'];
+slice_y = [x(1,:)' data_line_y];
+close(findobj('type','figure','name','Cross Section'))
+    try 
+       flat = curv_rad(slice_x);
+       flat = curv_rad(slice_y);
+    catch ME
+        disp('Could not fit curvature')
+    end
 end
